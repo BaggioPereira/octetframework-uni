@@ -42,6 +42,7 @@ namespace octet {
 		world = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, &config);
     }
 
+	//destructor
 	~tandm_game()
 	{
 		delete world;
@@ -50,6 +51,7 @@ namespace octet {
 		delete dispatcher;
 	}
 
+	//add a mesh with rigid body
 	void add_part(mat4t_in coord, mesh *shape, material *mat, bool is_dynamic)
 	{
 		scene_node *node = new scene_node();
@@ -117,6 +119,7 @@ namespace octet {
 		}
 	}
 
+	//create the level according to the txt file
 	void createLevel()
 	{
 		vec3 pos = vec3(0, 0, 0);
@@ -140,6 +143,7 @@ namespace octet {
 				add_part(worldCoord, box, floor, false);
 				rigid_bodies.back()->setFriction(0);
 				rigid_bodies.back()->setRestitution(0);
+				printf("This is floor %d\n", rigid_bodies.size());
 				worldCoord.loadIdentity();
 				/*node->translate(pos);
 				app_scene->add_child(node);
@@ -152,6 +156,7 @@ namespace octet {
 				add_part(worldCoord, box, flip, false);
 				rigid_bodies.back()->setFriction(0);
 				rigid_bodies.back()->setRestitution(0);
+				printf("This is flip/blocks %d\n", rigid_bodies.size());
 				worldCoord.loadIdentity();
 				/*node->translate(pos);
 				app_scene->add_child(node);
@@ -163,6 +168,7 @@ namespace octet {
 				add_part(worldCoord, box, end, false);
 				rigid_bodies.back()->setFriction(0);
 				rigid_bodies.back()->setRestitution(0);
+				printf("This is end block %d\n", rigid_bodies.size());
 				worldCoord.loadIdentity();
 				/*node->translate(pos);
 				app_scene->add_child(node);
@@ -171,9 +177,10 @@ namespace octet {
 				pos += vec3(1, 0, 0);
 				break;
 			case 'P': worldCoord.translate(pos);
-				add_part(worldCoord, box, player, false);
+				add_part(worldCoord, box, player, true);
 				rigid_bodies.back()->setFriction(0);
 				rigid_bodies.back()->setRestitution(0);
+				printf("This is player %d\n", rigid_bodies.size());
 				worldCoord.loadIdentity();
 				/*node->translate(pos);
 				app_scene->add_child(node);
@@ -186,6 +193,7 @@ namespace octet {
 				add_part(worldCoord, box, wall, false);
 				rigid_bodies.back()->setFriction(0);
 				rigid_bodies.back()->setRestitution(0);
+				printf("This is wall %d\n", rigid_bodies.size());
 				worldCoord.loadIdentity();
 				/*node->translate(pos);
 				app_scene->add_child(node);
@@ -236,6 +244,21 @@ namespace octet {
 
       // draw the scene
       app_scene->render((float)vx / vy);
+
+	  if (is_key_going_down(key_up))
+	  {
+		  rigid_bodies[480]->applyCentralForce(btVector3(0, 100, 0));
+	  }
+
+	  else if (is_key_down(key_right))
+	  {
+		  rigid_bodies[480]->applyCentralForce(btVector3(10, 0, 0));
+	  }
+
+	  else if (is_key_down(key_left))
+	  {
+		  rigid_bodies[480]->applyCentralForce(btVector3(-10, 0, 0));
+	  }
     }
   };
 }
