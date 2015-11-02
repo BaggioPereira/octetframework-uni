@@ -30,6 +30,7 @@ namespace octet {
 	scene_node *cam;
 
 	string contents;
+	int player_node;
 
   public:
     /// this is called when we construct the class before everything is initialised.
@@ -86,25 +87,38 @@ namespace octet {
 		rigid_bodies.back()->setFriction(0);
 		rigid_bodies.back()->setRestitution(0);
 		worldCoord.loadIdentity();
-		if (letter == 'B' || letter == 'F')
+		if (letter == 'P')
 		{
-			btHingeConstraint *flipper = new btHingeConstraint((*rigid_bodies.back()), btVector3(0.25f*0.95f, 0, 0.125f*-1.2f),btVector3(0,0,1.0f),false);
-			flipper->setLimit(-3.14f*0.2f, -3.14f*0.2f);
-			flippers.push_back(flipper);
-			world->addConstraint(flipper);
+			player_node = rigid_bodies.size() - 1; //gets the player node
+			rigid_bodies.back()->setLinearFactor(btVector3(1, 1, 0)); //constraints z axis movement
+			rigid_bodies.back()->setAngularFactor(btVector3(0, 0, 1)); //constraints x and y axis rotation
 		}
+
+
+		//NEEDS WORK, FLIPPERS NOT BEING SET TO CORRECT PIVOT POINTS
+		/*if (letter == 'F')
+		{
+			btVector3 offset = rigid_bodies.back()->getCenterOfMassPosition();
+			offset = btVector3(-offset.x()*0.25f, offset.y(), offset.z());
+			btHingeConstraint *flipperHinge =new btHingeConstraint(*rigid_bodies.back(), offset, btVector3(0, 0, 1), true);
+			flipperHinge->setLimit(-3.14f*0.5f, 3.14f*0.0f);
+			world->addConstraint(flipperHinge);
+			flippers.push_back(flipperHinge);
+		}*/
 	}
 
 	//clear the scene
 	void newScene()
 	{
+		rigid_bodies.reset();
+		flippers.reset();
 		app_scene->reset();
 		app_scene->create_default_camera_and_lights();
 		app_scene->get_camera_instance(0)->set_far_plane(1000);
 		cam = app_scene->get_camera_instance(0)->get_node();
 		cam->translate(vec3(24, -24, 50));
 		box = new mesh_box(0.5f);
-		flipperMesh = new mesh_box(vec3(0.5f, 0.25f, 0.5f));
+		flipperMesh = new mesh_box(vec3(5.f, 0.25f, 0.5f));
 		blockerMesh = new mesh_box(vec3(0.5f, 1, 0.5f));
 		sph = new mesh_sphere(vec3(0, 0, 0), 1, 1);
 		wall = new material(vec4(1, 0, 0, 1));
@@ -195,7 +209,7 @@ namespace octet {
 	{
       app_scene =  new visual_scene();
 	  newScene();
-	  loadTxt(1);
+	  loadTxt(4);
     }
 
     /// this is called to draw the world
@@ -226,17 +240,17 @@ namespace octet {
 
 	  if (is_key_going_down(key_up))
 	  {
-		  rigid_bodies[480]->applyForce(btVector3(0, 10, 0), btVector3(0, 0, 0));
+		  rigid_bodies[player_node]->applyCentralForce(btVector3(0, 100, 0));
 	  }
 
 	  else if (is_key_down(key_right))
 	  {
-		  rigid_bodies[480]->applyForce(btVector3(10, 0, 0), btVector3(0, 0, 0));
+		  rigid_bodies[player_node]->applyCentralForce(btVector3(10, 0, 0));
 	  }
 
 	  else if (is_key_down(key_left))
 	  {
-		  rigid_bodies[480]->applyForce(btVector3(-10, 0, 0), btVector3(0, 0, 0));
+		  rigid_bodies[player_node]->applyCentralForce(btVector3(-10, 0, 0));
 	  }
 
 	  if (is_key_going_down('1')||is_key_going_down(VK_NUMPAD1))
@@ -249,13 +263,18 @@ namespace octet {
 		  newScene();
 		  loadTxt(2);
 	  }
+	  if (is_key_going_down('3') || is_key_going_down(VK_NUMPAD3))
+	  {
+		  newScene();
+		  loadTxt(3);
+	  }
 
 	  //flipper test
 	  if (is_key_going_down('F'))
 	  {
 		  for (int i = 0; i < flippers.size(); i++)
 		  {
-			  flippers[i]->getRigidBodyA().applyTorqueImpulse(btVector3(0, 0, 500));
+			  flippers[i]->getRigidBodyA().applyTorqueImpulse(btVector3(0, 0, 50));
 		  }
 	  }
     }
