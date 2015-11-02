@@ -22,15 +22,15 @@ namespace octet {
 	mat4t worldCoord;
 
 	dynarray<btRigidBody*> rigid_bodies;
-	mesh_box *box;
+	dynarray<btHingeConstraint*> flippers;
+	mesh_box *box, *flipperMesh, *blockerMesh;
 	mesh_sphere *sph;
 	material *wall, *floor, *flip, *end, *player;
 
 	scene_node *cam;
 
 	string contents;
-
-	int levelNumber = 1;
+	int player_node;
 
   public:
     /// this is called when we construct the class before everything is initialised.
@@ -52,7 +52,7 @@ namespace octet {
 	}
 
 	//add a mesh with rigid body
-	void add_part(mat4t_in coord, mesh *shape, material *mat, bool is_dynamic)
+	void add_part(mat4t_in coord, mesh *shape, material *mat, bool is_dynamic, char letter)
 	{
 		scene_node *node = new scene_node();
 		node->access_nodeToParent() = coord;
@@ -79,22 +79,61 @@ namespace octet {
 		}
 	}
 
+	//call to create mesh and set position with friction and restitution
+	void add_rigid_body(vec3 position, mesh *msh, material *mat, char letter, bool active)
+	{
+		worldCoord.translate(position);
+		add_part(worldCoord, msh, mat, active, letter);
+		rigid_bodies.back()->setFriction(0);
+		rigid_bodies.back()->setRestitution(0);
+		worldCoord.loadIdentity();
+		if (letter == 'P')
+		{
+			player_node = rigid_bodies.size() - 1; //gets the player node
+			rigid_bodies.back()->setLinearFactor(btVector3(1, 1, 0)); //constraints z axis movement
+			rigid_bodies.back()->setAngularFactor(btVector3(0, 0, 1)); //constraints x and y axis rotation
+		}
+
+
+		//NEEDS WORK, FLIPPERS NOT BEING SET TO CORRECT PIVOT POINTS
+		/*if (letter == 'F')
+		{
+			btVector3 offset = rigid_bodies.back()->getCenterOfMassPosition();
+			offset = btVector3(-offset.x()*0.25f, offset.y(), offset.z());
+			btHingeConstraint *flipperHinge =new btHingeConstraint(*rigid_bodies.back(), offset, btVector3(0, 0, 1), true);
+			flipperHinge->setLimit(-3.14f*0.5f, 3.14f*0.0f);
+			world->addConstraint(flipperHinge);
+			flippers.push_back(flipperHinge);
+		}*/
+	}
+
 	//clear the scene
 	void newScene()
 	{
+		rigid_bodies.reset();
+		flippers.reset();
 		app_scene->reset();
 		app_scene->create_default_camera_and_lights();
 		app_scene->get_camera_instance(0)->set_far_plane(1000);
 		cam = app_scene->get_camera_instance(0)->get_node();
 		cam->translate(vec3(24, -24, 50));
+		box = new mesh_box(0.5f);
+		flipperMesh = new mesh_box(vec3(5.f, 0.25f, 0.5f));
+		blockerMesh = new mesh_box(vec3(0.5f, 1, 0.5f));
+		sph = new mesh_sphere(vec3(0, 0, 0), 1, 1);
+		wall = new material(vec4(1, 0, 0, 1));
+		floor = new material(vec4(0, 1, 0, 1));
+		flip = new material(vec4(0, 0, 1, 1));
+		end = new material(vec4(1, 1, 1, 1));
+		player = new material(vec4(0, 1, 1, 0));
 	}
 
 	//read txt file and get level data
-	void loadTxt()
+	void loadTxt(int num)
 	{
 		std::fstream myFile;
 		std::stringstream fileName;
-		fileName << "blanklevel" << ".txt";
+		fileName << "level" <<num<< ".txt";
 		myFile.open(fileName.str().c_str(), std::ios::in);
 		if (!myFile.is_open())
 		{
@@ -126,7 +165,6 @@ namespace octet {
 		int x = 0;
 		for (int i = 0; i < contents.size(); i++)
 		{
-			scene_node *node = new scene_node;
 			char c = contents[i];
 			switch (c)
 			{
@@ -139,65 +177,25 @@ namespace octet {
 				x += 1; 
 				pos += vec3(1, 0, 0);
 				break;
-			case '_': worldCoord.translate(pos);
-				add_part(worldCoord, box, floor, false);
-				rigid_bodies.back()->setFriction(0);
-				rigid_bodies.back()->setRestitution(0);
-				printf("This is floor %d\n", rigid_bodies.size());
-				worldCoord.loadIdentity();
-				/*node->translate(pos);
-				app_scene->add_child(node);
-				app_scene->add_mesh_instance(new mesh_instance(node, box, floor));*/
+			case '_': add_rigid_body(pos, box, floor, c, false);
 				x += 1;
 				pos += vec3(1, 0, 0);
 				break;
 			case 'B':
-			case 'F': worldCoord.translate(pos);
-				add_part(worldCoord, box, flip, false);
-				rigid_bodies.back()->setFriction(0);
-				rigid_bodies.back()->setRestitution(0);
-				printf("This is flip/blocks %d\n", rigid_bodies.size());
-				worldCoord.loadIdentity();
-				/*node->translate(pos);
-				app_scene->add_child(node);
-				app_scene->add_mesh_instance(new mesh_instance(node, box, flip));*/
+			case 'F': add_rigid_body(pos, flipperMesh, flip, c, true);
 				x += 1;
 				pos += vec3(1, 0, 0);
 				break;
-			case 'E': worldCoord.translate(pos);
-				add_part(worldCoord, box, end, false);
-				rigid_bodies.back()->setFriction(0);
-				rigid_bodies.back()->setRestitution(0);
-				printf("This is end block %d\n", rigid_bodies.size());
-				worldCoord.loadIdentity();
-				/*node->translate(pos);
-				app_scene->add_child(node);
-				app_scene->add_mesh_instance(new mesh_instance(node, box, end));*/
+			case 'E': add_rigid_body(pos, box, end, c, false);
 				x += 1;
 				pos += vec3(1, 0, 0);
 				break;
-			case 'P': worldCoord.translate(pos);
-				add_part(worldCoord, box, player, true);
-				rigid_bodies.back()->setFriction(0);
-				rigid_bodies.back()->setRestitution(0);
-				printf("This is player %d\n", rigid_bodies.size());
-				worldCoord.loadIdentity();
-				/*node->translate(pos);
-				app_scene->add_child(node);
-				app_scene->add_mesh_instance(new mesh_instance(node, box, player));*/
+			case 'P': add_rigid_body(pos, box, player, c, true);
 				x += 1;
 				pos += vec3(1, 0, 0);
 				break;
 			case '-':
-			case '¦': worldCoord.translate(pos);
-				add_part(worldCoord, box, wall, false);
-				rigid_bodies.back()->setFriction(0);
-				rigid_bodies.back()->setRestitution(0);
-				printf("This is wall %d\n", rigid_bodies.size());
-				worldCoord.loadIdentity();
-				/*node->translate(pos);
-				app_scene->add_child(node);
-				app_scene->add_mesh_instance(new mesh_instance(node, box, wall));*/
+			case '¦': add_rigid_body(pos, box, wall, c, false);
 				x += 1;
 				pos += vec3(1, 0, 0);
 				break;
@@ -207,21 +205,16 @@ namespace octet {
 	}
 
     /// this is called once OpenGL is initialized
-    void app_init() {
+    void app_init() 
+	{
       app_scene =  new visual_scene();
-	  box = new mesh_box(0.5f);
-	  sph = new mesh_sphere(vec3(0, 0, 0), 1, 1);
-	  wall = new material(vec4(1, 0, 0, 1));
-	  floor = new material(vec4(0, 1, 0, 1));
-	  flip = new material(vec4(0, 0, 1, 1));
-	  end = new material(vec4(1, 1, 1, 1));
-	  player = new material(vec4(0, 1, 1, 0));
 	  newScene();
-	  loadTxt();
+	  loadTxt(4);
     }
 
     /// this is called to draw the world
-    void draw_world(int x, int y, int w, int h) {
+    void draw_world(int x, int y, int w, int h) 
+	{
       int vx = 0, vy = 0;
       get_viewport_size(vx, vy);
       app_scene->begin_render(vx, vy);
@@ -247,17 +240,42 @@ namespace octet {
 
 	  if (is_key_going_down(key_up))
 	  {
-		  rigid_bodies[480]->applyCentralForce(btVector3(0, 100, 0));
+		  rigid_bodies[player_node]->applyCentralForce(btVector3(0, 100, 0));
 	  }
 
 	  else if (is_key_down(key_right))
 	  {
-		  rigid_bodies[480]->applyCentralForce(btVector3(10, 0, 0));
+		  rigid_bodies[player_node]->applyCentralForce(btVector3(10, 0, 0));
 	  }
 
 	  else if (is_key_down(key_left))
 	  {
-		  rigid_bodies[480]->applyCentralForce(btVector3(-10, 0, 0));
+		  rigid_bodies[player_node]->applyCentralForce(btVector3(-10, 0, 0));
+	  }
+
+	  if (is_key_going_down('1')||is_key_going_down(VK_NUMPAD1))
+	  {
+		  newScene();
+		  loadTxt(1);
+	  }
+	  if (is_key_going_down('2') || is_key_going_down(VK_NUMPAD2))
+	  {
+		  newScene();
+		  loadTxt(2);
+	  }
+	  if (is_key_going_down('3') || is_key_going_down(VK_NUMPAD3))
+	  {
+		  newScene();
+		  loadTxt(3);
+	  }
+
+	  //flipper test
+	  if (is_key_going_down('F'))
+	  {
+		  for (int i = 0; i < flippers.size(); i++)
+		  {
+			  flippers[i]->getRigidBodyA().applyTorqueImpulse(btVector3(0, 0, 50));
+		  }
 	  }
     }
   };

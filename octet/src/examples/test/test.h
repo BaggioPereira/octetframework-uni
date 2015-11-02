@@ -6,12 +6,12 @@
 //
 namespace octet {
   /// Scene containing a box with octet.
-  class example_invaderers : public app {
+  class test : public app {
     // scene for drawing box
     ref<visual_scene> app_scene;
   public:
     /// this is called when we construct the class before everything is initialised.
-    example_invaderers(int argc, char **argv) : app(argc, argv) {
+    test(int argc, char **argv) : app(argc, argv) {
     }
 
     /// this is called once OpenGL is initialized
