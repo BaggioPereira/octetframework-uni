@@ -7,6 +7,7 @@
 
 #include <fstream>
 #include <sstream>
+#include <Xinput.h>
 
 namespace octet {
   /// Scene containing a box with octet.
@@ -20,9 +21,10 @@ namespace octet {
 	btDiscreteDynamicsWorld *world;
 
 	mat4t worldCoord;
-
+	btRigidBody *staticObject;
 	dynarray<btRigidBody*> rigid_bodies;
 	dynarray<btHingeConstraint*> flippers;
+	dynarray<btGeneric6DofSpringConstraint*> springBodies;
 	mesh_box *box, *flipperMesh, *blockerMesh;
 	mesh_sphere *sph;
 	material *wall, *floor, *flip, *end, *player;
@@ -31,6 +33,17 @@ namespace octet {
 
 	string contents;
 	int player_node;
+
+	//Xbox controller enums and state
+	XINPUT_STATE state;
+	enum BUTTONS {
+		Left = 0, 
+		Right, 
+		Up, 
+		Down, 
+		Start, 
+		Back
+	};
 
   public:
     /// this is called when we construct the class before everything is initialised.
@@ -52,7 +65,7 @@ namespace octet {
 	}
 
 	//add a mesh with rigid body
-	void add_part(mat4t_in coord, mesh *shape, material *mat, bool is_dynamic, char letter)
+	void add_part(mat4t_in coord, mesh *shape, material *mat, bool is_dynamic)
 	{
 		scene_node *node = new scene_node();
 		node->access_nodeToParent() = coord;
@@ -83,10 +96,18 @@ namespace octet {
 	void add_rigid_body(vec3 position, mesh *msh, material *mat, char letter, bool active)
 	{
 		worldCoord.translate(position);
-		add_part(worldCoord, msh, mat, active, letter);
+		add_part(worldCoord, msh, mat, active);
+		
 		rigid_bodies.back()->setFriction(0);
 		rigid_bodies.back()->setRestitution(0);
-		worldCoord.loadIdentity();
+
+		//static object 
+		if (letter == 'O')
+		{
+			staticObject = rigid_bodies.back();
+		}
+		
+		//player object
 		if (letter == 'P')
 		{
 			player_node = rigid_bodies.size() - 1; //gets the player node
@@ -94,17 +115,41 @@ namespace octet {
 			rigid_bodies.back()->setAngularFactor(btVector3(0, 0, 1)); //constraints x and y axis rotation
 		}
 
+		//spring blockers
+		if (letter == 'B')
+		{
+			btTransform localA, localB;
+			localA.setIdentity();
+			localB.setIdentity();
+			localA.getOrigin() = btVector3(position.x(), position.y(), position.z());
+			btRigidBody *springBody = rigid_bodies.back();
+			springBody->setLinearFactor(btVector3(0, 1, 0));
+			btGeneric6DofSpringConstraint *springConstraint = new btGeneric6DofSpringConstraint(*staticObject, *springBody, localA, localB, true);
+			springConstraint->setLimit(0, 0, 0); //X Axis
+			springConstraint->setLimit(1, 3, -3); //Y Axis
+			springConstraint->setLimit(2, 3, -3); //Z Axis
+			springConstraint->setLimit(3, 0, 0); 
+			springConstraint->setLimit(4, 0, 0); 
+			springConstraint->setLimit(5, 0, 0); 
+			springConstraint->enableSpring(1, true); //int index implies the axis you want to move in
+			springConstraint->setStiffness(1, 100);
+			world->addConstraint(springConstraint);
+			rigid_bodies.back()->applyCentralForce(btVector3(0, 100, 0));
+			springBodies.push_back(springConstraint);
+		}
+
 
 		//NEEDS WORK, FLIPPERS NOT BEING SET TO CORRECT PIVOT POINTS
-		/*if (letter == 'F')
+		//NEED TO FIND DYNAMIC WAY TO SET PIVOT POINTS
+		if (letter == 'F')
 		{
-			btVector3 offset = rigid_bodies.back()->getCenterOfMassPosition();
-			offset = btVector3(-offset.x()*0.25f, offset.y(), offset.z());
-			btHingeConstraint *flipperHinge =new btHingeConstraint(*rigid_bodies.back(), offset, btVector3(0, 0, 1), true);
-			flipperHinge->setLimit(-3.14f*0.5f, 3.14f*0.0f);
+			btRigidBody *hingeBody = rigid_bodies.back();
+			btHingeConstraint *flipperHinge =new btHingeConstraint(*hingeBody, btVector3(0.75,0,0), btVector3(0, 0, 1));
 			world->addConstraint(flipperHinge);
 			flippers.push_back(flipperHinge);
-		}*/
+		}
+
+		worldCoord.loadIdentity();
 	}
 
 	//clear the scene
@@ -118,7 +163,7 @@ namespace octet {
 		cam = app_scene->get_camera_instance(0)->get_node();
 		cam->translate(vec3(24, -24, 50));
 		box = new mesh_box(0.5f);
-		flipperMesh = new mesh_box(vec3(5.f, 0.25f, 0.5f));
+		flipperMesh = new mesh_box(vec3(1.5f, 0.25f, 0.5f));
 		blockerMesh = new mesh_box(vec3(0.5f, 1, 0.5f));
 		sph = new mesh_sphere(vec3(0, 0, 0), 1, 1);
 		wall = new material(vec4(1, 0, 0, 1));
@@ -126,6 +171,26 @@ namespace octet {
 		flip = new material(vec4(0, 0, 1, 1));
 		end = new material(vec4(1, 1, 1, 1));
 		player = new material(vec4(0, 1, 1, 0));
+
+		//Xbox Controller detection code
+		DWORD dwResult;
+		for (DWORD i = 0; i< XUSER_MAX_COUNT; i++)
+		{
+			
+			ZeroMemory(&state, sizeof(XINPUT_STATE));
+
+			// Simply get the state of the controller from XInput.
+			dwResult = XInputGetState(i, &state);
+
+			if (dwResult == ERROR_SUCCESS)
+			{
+				printf("// Controller is connected %d\n",i);
+			}
+			else
+			{
+				printf("// Controller is not connected\n"); 
+			}
+		}
 	}
 
 	//read txt file and get level data
@@ -178,6 +243,10 @@ namespace octet {
 				pos += vec3(1, 0, 0);
 				break;
 			case '_': add_rigid_body(pos, box, floor, c, false);
+				x += 1;
+				pos += vec3(1, 0, 0);
+				break;
+			case 'O':add_rigid_body(pos, box, wall, c, false);
 				x += 1;
 				pos += vec3(1, 0, 0);
 				break;
