@@ -140,15 +140,14 @@ namespace octet {
 
 
 		//NEEDS WORK, FLIPPERS NOT BEING SET TO CORRECT PIVOT POINTS
-		/*if (letter == 'F')
+		//NEED TO FIND DYNAMIC WAY TO SET PIVOT POINTS
+		if (letter == 'F')
 		{
-			btVector3 offset = rigid_bodies.back()->getCenterOfMassPosition();
-			offset = btVector3(-offset.x()*0.25f, offset.y(), offset.z());
-			btHingeConstraint *flipperHinge =new btHingeConstraint(*rigid_bodies.back(), offset, btVector3(0, 0, 1), true);
-			flipperHinge->setLimit(-3.14f*0.5f, 3.14f*0.0f);
+			btRigidBody *hingeBody = rigid_bodies.back();
+			btHingeConstraint *flipperHinge =new btHingeConstraint(*hingeBody, btVector3(0.75,0,0), btVector3(0, 0, 1));
 			world->addConstraint(flipperHinge);
 			flippers.push_back(flipperHinge);
-		}*/
+		}
 
 		worldCoord.loadIdentity();
 	}
@@ -164,7 +163,7 @@ namespace octet {
 		cam = app_scene->get_camera_instance(0)->get_node();
 		cam->translate(vec3(24, -24, 50));
 		box = new mesh_box(0.5f);
-		flipperMesh = new mesh_box(vec3(0.5f, 0.25f, 0.5f));
+		flipperMesh = new mesh_box(vec3(1.5f, 0.25f, 0.5f));
 		blockerMesh = new mesh_box(vec3(0.5f, 1, 0.5f));
 		sph = new mesh_sphere(vec3(0, 0, 0), 1, 1);
 		wall = new material(vec4(1, 0, 0, 1));
@@ -279,7 +278,7 @@ namespace octet {
 	{
       app_scene =  new visual_scene();
 	  newScene();
-	  loadTxt(2);
+	  loadTxt(4);
     }
 
     /// this is called to draw the world
