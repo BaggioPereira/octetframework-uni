@@ -7,6 +7,7 @@
 
 #include <fstream>
 #include <sstream>
+#include <Xinput.h>
 
 namespace octet {
   /// Scene containing a box with octet.
@@ -157,6 +158,26 @@ namespace octet {
 		flip = new material(vec4(0, 0, 1, 1));
 		end = new material(vec4(1, 1, 1, 1));
 		player = new material(vec4(0, 1, 1, 0));
+
+		//Controller detection code
+		DWORD dwResult;
+		for (DWORD i = 0; i< XUSER_MAX_COUNT; i++)
+		{
+			XINPUT_STATE state;
+			ZeroMemory(&state, sizeof(XINPUT_STATE));
+
+			// Simply get the state of the controller from XInput.
+			dwResult = XInputGetState(i, &state);
+
+			if (dwResult == ERROR_SUCCESS)
+			{
+				printf("// Controller is connected %d\n",i);
+			}
+			else
+			{
+				printf("// Controller is not connected\n"); 
+			}
+		}
 	}
 
 	//read txt file and get level data
