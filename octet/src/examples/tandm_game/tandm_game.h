@@ -20,9 +20,10 @@ namespace octet {
 	btDiscreteDynamicsWorld *world;
 
 	mat4t worldCoord;
-
+	btRigidBody *staticObject;
 	dynarray<btRigidBody*> rigid_bodies;
 	dynarray<btHingeConstraint*> flippers;
+	dynarray<btGeneric6DofSpringConstraint*> springBodies;
 	mesh_box *box, *flipperMesh, *blockerMesh;
 	mesh_sphere *sph;
 	material *wall, *floor, *flip, *end, *player;
@@ -52,7 +53,7 @@ namespace octet {
 	}
 
 	//add a mesh with rigid body
-	void add_part(mat4t_in coord, mesh *shape, material *mat, bool is_dynamic, char letter)
+	void add_part(mat4t_in coord, mesh *shape, material *mat, bool is_dynamic)
 	{
 		scene_node *node = new scene_node();
 		node->access_nodeToParent() = coord;
@@ -83,15 +84,43 @@ namespace octet {
 	void add_rigid_body(vec3 position, mesh *msh, material *mat, char letter, bool active)
 	{
 		worldCoord.translate(position);
-		add_part(worldCoord, msh, mat, active, letter);
-		rigid_bodies.back()->setFriction(0);
-		rigid_bodies.back()->setRestitution(0);
-		worldCoord.loadIdentity();
+		add_part(worldCoord, msh, mat, active);
+		
+		//rigid_bodies.back()->setFriction(0);
+		//rigid_bodies.back()->setRestitution(0);
+
+		if (letter == 'O')
+		{
+			staticObject = rigid_bodies.back();
+		}
+		
 		if (letter == 'P')
 		{
 			player_node = rigid_bodies.size() - 1; //gets the player node
 			rigid_bodies.back()->setLinearFactor(btVector3(1, 1, 0)); //constraints z axis movement
 			rigid_bodies.back()->setAngularFactor(btVector3(0, 0, 1)); //constraints x and y axis rotation
+		}
+
+		//spring blockers
+		if (letter == 'B')
+		{
+			btTransform localA, localB;
+			localA.setIdentity();
+			localB.setIdentity();
+			localA.getOrigin() = btVector3(position.x(), position.y(), position.z());
+			btRigidBody *springBody = rigid_bodies.back();
+			btGeneric6DofSpringConstraint *springConstraint = new btGeneric6DofSpringConstraint(*staticObject, *springBody, localA, localB, true);
+			springConstraint->setLimit(0, 1, -1);
+			springConstraint->setLimit(1, 0, 0);
+			springConstraint->setLimit(2, 0, 0);
+			springConstraint->setLimit(3, 0, 0);
+			springConstraint->setLimit(4, 0, 0);
+			springConstraint->setLimit(5, 0, 0);
+			springConstraint->enableSpring(0, true);
+			springConstraint->setStiffness(0, 100);
+			world->addConstraint(springConstraint);
+			rigid_bodies.back()->applyCentralForce(btVector3(100, 0, 0));
+			springBodies.push_back(springConstraint);
 		}
 
 
@@ -105,6 +134,8 @@ namespace octet {
 			world->addConstraint(flipperHinge);
 			flippers.push_back(flipperHinge);
 		}*/
+
+		worldCoord.loadIdentity();
 	}
 
 	//clear the scene
@@ -118,7 +149,7 @@ namespace octet {
 		cam = app_scene->get_camera_instance(0)->get_node();
 		cam->translate(vec3(24, -24, 50));
 		box = new mesh_box(0.5f);
-		flipperMesh = new mesh_box(vec3(5.f, 0.25f, 0.5f));
+		flipperMesh = new mesh_box(vec3(0.5f, 0.25f, 0.5f));
 		blockerMesh = new mesh_box(vec3(0.5f, 1, 0.5f));
 		sph = new mesh_sphere(vec3(0, 0, 0), 1, 1);
 		wall = new material(vec4(1, 0, 0, 1));
@@ -181,6 +212,10 @@ namespace octet {
 				x += 1;
 				pos += vec3(1, 0, 0);
 				break;
+			case 'O':add_rigid_body(pos, box, wall, c, false);
+				x += 1;
+				pos += vec3(1, 0, 0);
+				break;
 			case 'B':
 			case 'F': add_rigid_body(pos, flipperMesh, flip, c, true);
 				x += 1;
@@ -209,7 +244,7 @@ namespace octet {
 	{
       app_scene =  new visual_scene();
 	  newScene();
-	  loadTxt(4);
+	  loadTxt(2);
     }
 
     /// this is called to draw the world
