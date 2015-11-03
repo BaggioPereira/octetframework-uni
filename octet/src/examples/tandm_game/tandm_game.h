@@ -34,6 +34,9 @@ namespace octet {
 	string contents;
 	int player_node;
 
+	bool hingeOffsetNotSet = false;
+	btVector3 offset;
+
 	//Xbox controller enums and state
 	XINPUT_STATE state;
 	enum BUTTONS {
@@ -143,8 +146,16 @@ namespace octet {
 		//NEED TO FIND DYNAMIC WAY TO SET PIVOT POINTS
 		if (letter == 'F')
 		{
+			if (!hingeOffsetNotSet)
+			{
+				offset = get_btVector3(flipperMesh->get_aabb().get_max());
+				offset = btVector3(offset.x()*0.5f, offset.y()*0.0f, offset.z()*0.0f);
+				printf("%g %g %g\n", offset.x(), offset.y(), offset.z());
+				hingeOffsetNotSet = true;
+			}
+			
 			btRigidBody *hingeBody = rigid_bodies.back();
-			btHingeConstraint *flipperHinge =new btHingeConstraint(*hingeBody, btVector3(0.75,0,0), btVector3(0, 0, 1));
+			btHingeConstraint *flipperHinge =new btHingeConstraint(*hingeBody, offset, btVector3(0, 0, 1));
 			world->addConstraint(flipperHinge);
 			flippers.push_back(flipperHinge);
 		}
@@ -163,7 +174,7 @@ namespace octet {
 		cam = app_scene->get_camera_instance(0)->get_node();
 		cam->translate(vec3(24, -24, 50));
 		box = new mesh_box(0.5f);
-		flipperMesh = new mesh_box(vec3(1.5f, 0.25f, 0.5f));
+		flipperMesh = new mesh_box(vec3(2.5f, 0.25f, 0.5f));
 		blockerMesh = new mesh_box(vec3(0.5f, 1, 0.5f));
 		sph = new mesh_sphere(vec3(0, 0, 0), 1, 1);
 		wall = new material(vec4(1, 0, 0, 1));
@@ -171,7 +182,7 @@ namespace octet {
 		flip = new material(vec4(0, 0, 1, 1));
 		end = new material(vec4(1, 1, 1, 1));
 		player = new material(vec4(0, 1, 1, 0));
-
+		offset = btVector3(0, 0, 0);
 		//Xbox Controller detection code
 		DWORD dwResult;
 		for (DWORD i = 0; i< XUSER_MAX_COUNT; i++)
