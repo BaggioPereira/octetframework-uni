@@ -34,6 +34,17 @@ namespace octet {
 	string contents;
 	int player_node;
 
+	//Xbox controller enums and state
+	XINPUT_STATE state;
+	enum BUTTONS {
+		Left = 0, 
+		Right, 
+		Up, 
+		Down, 
+		Start, 
+		Back
+	};
+
   public:
     /// this is called when we construct the class before everything is initialised.
     tandm_game(int argc, char **argv) : app(argc, argv) 
@@ -90,11 +101,13 @@ namespace octet {
 		rigid_bodies.back()->setFriction(0);
 		rigid_bodies.back()->setRestitution(0);
 
+		//static object 
 		if (letter == 'O')
 		{
 			staticObject = rigid_bodies.back();
 		}
 		
+		//player object
 		if (letter == 'P')
 		{
 			player_node = rigid_bodies.size() - 1; //gets the player node
@@ -110,6 +123,7 @@ namespace octet {
 			localB.setIdentity();
 			localA.getOrigin() = btVector3(position.x(), position.y(), position.z());
 			btRigidBody *springBody = rigid_bodies.back();
+			springBody->setLinearFactor(btVector3(0, 1, 0));
 			btGeneric6DofSpringConstraint *springConstraint = new btGeneric6DofSpringConstraint(*staticObject, *springBody, localA, localB, true);
 			springConstraint->setLimit(0, 0, 0); //X Axis
 			springConstraint->setLimit(1, 3, -3); //Y Axis
@@ -159,11 +173,11 @@ namespace octet {
 		end = new material(vec4(1, 1, 1, 1));
 		player = new material(vec4(0, 1, 1, 0));
 
-		//Controller detection code
+		//Xbox Controller detection code
 		DWORD dwResult;
 		for (DWORD i = 0; i< XUSER_MAX_COUNT; i++)
 		{
-			XINPUT_STATE state;
+			
 			ZeroMemory(&state, sizeof(XINPUT_STATE));
 
 			// Simply get the state of the controller from XInput.
@@ -265,7 +279,7 @@ namespace octet {
 	{
       app_scene =  new visual_scene();
 	  newScene();
-	  loadTxt(4);
+	  loadTxt(2);
     }
 
     /// this is called to draw the world
