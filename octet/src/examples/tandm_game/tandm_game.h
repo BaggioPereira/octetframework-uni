@@ -86,8 +86,8 @@ namespace octet {
 		worldCoord.translate(position);
 		add_part(worldCoord, msh, mat, active);
 		
-		//rigid_bodies.back()->setFriction(0);
-		//rigid_bodies.back()->setRestitution(0);
+		rigid_bodies.back()->setFriction(0);
+		rigid_bodies.back()->setRestitution(0);
 
 		if (letter == 'O')
 		{
@@ -110,16 +110,16 @@ namespace octet {
 			localA.getOrigin() = btVector3(position.x(), position.y(), position.z());
 			btRigidBody *springBody = rigid_bodies.back();
 			btGeneric6DofSpringConstraint *springConstraint = new btGeneric6DofSpringConstraint(*staticObject, *springBody, localA, localB, true);
-			springConstraint->setLimit(0, 1, -1);
-			springConstraint->setLimit(1, 0, 0);
-			springConstraint->setLimit(2, 0, 0);
-			springConstraint->setLimit(3, 0, 0);
-			springConstraint->setLimit(4, 0, 0);
-			springConstraint->setLimit(5, 0, 0);
-			springConstraint->enableSpring(0, true);
-			springConstraint->setStiffness(0, 100);
+			springConstraint->setLimit(0, 0, 0); //X Axis
+			springConstraint->setLimit(1, 3, -3); //Y Axis
+			springConstraint->setLimit(2, 3, -3); //Z Axis
+			springConstraint->setLimit(3, 0, 0); 
+			springConstraint->setLimit(4, 0, 0); 
+			springConstraint->setLimit(5, 0, 0); 
+			springConstraint->enableSpring(1, true); //int index implies the axis you want to move in
+			springConstraint->setStiffness(1, 100);
 			world->addConstraint(springConstraint);
-			rigid_bodies.back()->applyCentralForce(btVector3(100, 0, 0));
+			rigid_bodies.back()->applyCentralForce(btVector3(0, 100, 0));
 			springBodies.push_back(springConstraint);
 		}
 
@@ -244,7 +244,7 @@ namespace octet {
 	{
       app_scene =  new visual_scene();
 	  newScene();
-	  loadTxt(2);
+	  loadTxt(4);
     }
 
     /// this is called to draw the world
