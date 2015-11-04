@@ -49,7 +49,7 @@ namespace octet {
 
 	scene_node *cam;
 
-	//
+	//string to hold the txt file
 	string contents;
 
 	//the player id
@@ -88,6 +88,7 @@ namespace octet {
 	float start = Start;
 	float back = Back;
 
+	bool controllerConnected = false;
 
   public:
     /// this is called when we construct the class before everything is initialised.
@@ -214,6 +215,7 @@ namespace octet {
 		if (dwResult == ERROR_SUCCESS)
 		{
 			printf("Controller is connected\n");
+			controllerConnected = true;
 		}
 		else
 		{
@@ -221,11 +223,20 @@ namespace octet {
 		}
 	}
 
+	//check state if controller is unplugged
 	XINPUT_STATE getState()
 	{
 		XINPUT_STATE currentState;
 		ZeroMemory(&currentState, sizeof(XINPUT_STATE));
-		XInputGetState(0, &currentState);
+		dwResult = XInputGetState(0, &currentState);
+		if (dwResult == ERROR_SUCCESS)
+		{
+			controllerConnected = true;
+		}
+		else
+		{
+			controllerConnected = false;
+		}
 		return currentState;
 	}
 
@@ -379,37 +390,43 @@ namespace octet {
 	  //Controller
 	  controllerUpdate();
 
-	  if (buttonPress(left))
+	  if (controllerConnected)
 	  {
-		  rigid_bodies[player_node]->applyCentralForce(btVector3(-10, 0, 0));
+		  if (buttonPress(left))
+		  {
+			  rigid_bodies[player_node]->applyCentralForce(btVector3(-10, 0, 0));
+		  }
+
+		  if (buttonPress(right))
+		  {
+			  rigid_bodies[player_node]->applyCentralForce(btVector3(10, 0, 0));
+		  }
+
+		  if (buttonPress(FaceA))
+		  {
+			  rigid_bodies[player_node]->applyCentralForce(btVector3(0, 25, 0));
+		  }
 	  }
 
-	  if (buttonPress(right))
+	  //Keyboard
+	  else if (!controllerConnected)
 	  {
-		  rigid_bodies[player_node]->applyCentralForce(btVector3(10, 0, 0));
+		  //KEY INPUTS
+		  if (is_key_down(VK_SPACE))
+		  {
+			  rigid_bodies[player_node]->applyCentralForce(btVector3(0, 25, 0));
+		  }
+
+		  else if (is_key_down(key_right))
+		  {
+			  rigid_bodies[player_node]->applyCentralForce(btVector3(10, 0, 0));
+		  }
+
+		  else if (is_key_down(key_left))
+		  {
+			  rigid_bodies[player_node]->applyCentralForce(btVector3(-10, 0, 0));
+		  }
 	  }
-
-	  if (buttonPress(FaceA))
-	  {
-		  rigid_bodies[player_node]->applyCentralForce(btVector3(0, 25, 0));
-	  }
-
-
-	  //KEY INPUTS
-	  /*if (is_key_going_down(key_up))
-	  {
-		  
-	  }
-
-	  else if (is_key_down(key_right))
-	  {
-		  
-	  }
-
-	  else if (is_key_down(key_left))
-	  {
-		  
-	  }*/
 
 	  /*if (is_key_going_down('1')||is_key_going_down(VK_NUMPAD1))
 	  {
@@ -425,15 +442,6 @@ namespace octet {
 	  {
 		  newScene();
 		  loadTxt(3);
-	  }*/
-
-	  //flipper test
-	  /*if (is_key_going_down('F'))
-	  {
-		  for (int i = 0; i < flippers.size(); i++)
-		  {
-			  flippers[i]->getRigidBodyA().applyTorqueImpulse(btVector3(0, 0, 50));
-		  }
 	  }*/
     }
   };
