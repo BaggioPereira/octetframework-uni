@@ -10,7 +10,25 @@
 #include <Xinput.h>
 
 namespace octet {
-  /// Scene containing a box with octet.
+
+	//XINPUT GAMEPAD
+	static const WORD GAMEPADBUTTONS[] = {
+		XINPUT_GAMEPAD_A,
+		XINPUT_GAMEPAD_B,
+		XINPUT_GAMEPAD_X,
+		XINPUT_GAMEPAD_Y,
+		XINPUT_GAMEPAD_DPAD_UP,
+		XINPUT_GAMEPAD_DPAD_DOWN,
+		XINPUT_GAMEPAD_DPAD_LEFT,
+		XINPUT_GAMEPAD_DPAD_RIGHT,
+		XINPUT_GAMEPAD_LEFT_SHOULDER,
+		XINPUT_GAMEPAD_RIGHT_SHOULDER,
+		XINPUT_GAMEPAD_LEFT_THUMB,
+		XINPUT_GAMEPAD_RIGHT_THUMB,
+		XINPUT_GAMEPAD_BACK,
+		XINPUT_GAMEPAD_START
+	};
+
   class tandm_game : public app {
     // scene for drawing box
     ref<visual_scene> app_scene;
@@ -31,22 +49,45 @@ namespace octet {
 
 	scene_node *cam;
 
+	//
 	string contents;
+
+	//the player id
 	int player_node;
 
+	//Hinge variables
 	bool hingeOffsetNotSet = false;
 	btVector3 offset;
 
 	//Xbox controller enums and state
 	XINPUT_STATE state;
+	DWORD dwResult;
+
 	enum BUTTONS {
-		Left = 0, 
-		Right, 
-		Up, 
-		Down, 
-		Start, 
+		FaceA=0,
+		B,
+		X,
+		Y,
+		Up,
+		Down,
+		Left,
+		Right,
+		LeftShoulder,
+		RightShoulder,
+		LeftStick,
+		RightStick,
+		Start,
 		Back
 	};
+
+	float left = Left;
+	float right = Right;
+	float up = Up;
+	float down = Down;
+	float faceA = FaceA;
+	float start = Start;
+	float back = Back;
+
 
   public:
     /// this is called when we construct the class before everything is initialised.
@@ -141,9 +182,7 @@ namespace octet {
 			springBodies.push_back(springConstraint);
 		}
 
-
-		//NEEDS WORK, FLIPPERS NOT BEING SET TO CORRECT PIVOT POINTS
-		//NEED TO FIND DYNAMIC WAY TO SET PIVOT POINTS
+		//Hinges
 		if (letter == 'F')
 		{
 			if (!hingeOffsetNotSet)
@@ -163,6 +202,43 @@ namespace octet {
 		worldCoord.loadIdentity();
 	}
 
+	//Controller functions
+	void controller()
+	{
+		//Xbox Controller detection code
+		ZeroMemory(&state, sizeof(XINPUT_STATE));
+
+		// Simply get the state of the controller from XInput.
+		dwResult = XInputGetState(0, &state);
+
+		if (dwResult == ERROR_SUCCESS)
+		{
+			printf("Controller is connected\n");
+		}
+		else
+		{
+			printf("Controller is not connected\n");
+		}
+	}
+
+	XINPUT_STATE getState()
+	{
+		XINPUT_STATE currentState;
+		ZeroMemory(&currentState, sizeof(XINPUT_STATE));
+		XInputGetState(0, &currentState);
+		return currentState;
+	}
+
+	void controllerUpdate()
+	{
+		state = getState();
+	}
+	
+	bool buttonPress(int button)
+	{
+		return (state.Gamepad.wButtons & GAMEPADBUTTONS[button]) ? true : false;
+	}
+
 	//clear the scene
 	void newScene()
 	{
@@ -174,7 +250,7 @@ namespace octet {
 		cam = app_scene->get_camera_instance(0)->get_node();
 		cam->translate(vec3(24, -24, 50));
 		box = new mesh_box(0.5f);
-		flipperMesh = new mesh_box(vec3(2.5f, 0.25f, 0.5f));
+		flipperMesh = new mesh_box(vec3(0.5f, 0.25f, 0.5f));
 		blockerMesh = new mesh_box(vec3(0.5f, 1, 0.5f));
 		sph = new mesh_sphere(vec3(0, 0, 0), 1, 1);
 		wall = new material(vec4(1, 0, 0, 1));
@@ -183,25 +259,7 @@ namespace octet {
 		end = new material(vec4(1, 1, 1, 1));
 		player = new material(vec4(0, 1, 1, 0));
 		offset = btVector3(0, 0, 0);
-		//Xbox Controller detection code
-		DWORD dwResult;
-		for (DWORD i = 0; i< XUSER_MAX_COUNT; i++)
-		{
-			
-			ZeroMemory(&state, sizeof(XINPUT_STATE));
-
-			// Simply get the state of the controller from XInput.
-			dwResult = XInputGetState(i, &state);
-
-			if (dwResult == ERROR_SUCCESS)
-			{
-				printf("// Controller is connected %d\n",i);
-			}
-			else
-			{
-				printf("// Controller is not connected\n"); 
-			}
-		}
+		controller();
 	}
 
 	//read txt file and get level data
@@ -289,7 +347,7 @@ namespace octet {
 	{
       app_scene =  new visual_scene();
 	  newScene();
-	  loadTxt(4);
+	  loadTxt(2);
     }
 
     /// this is called to draw the world
@@ -318,22 +376,42 @@ namespace octet {
       // draw the scene
       app_scene->render((float)vx / vy);
 
-	  if (is_key_going_down(key_up))
-	  {
-		  rigid_bodies[player_node]->applyCentralForce(btVector3(0, 100, 0));
-	  }
+	  //Controller
+	  controllerUpdate();
 
-	  else if (is_key_down(key_right))
-	  {
-		  rigid_bodies[player_node]->applyCentralForce(btVector3(10, 0, 0));
-	  }
-
-	  else if (is_key_down(key_left))
+	  if (buttonPress(left))
 	  {
 		  rigid_bodies[player_node]->applyCentralForce(btVector3(-10, 0, 0));
 	  }
 
-	  if (is_key_going_down('1')||is_key_going_down(VK_NUMPAD1))
+	  if (buttonPress(right))
+	  {
+		  rigid_bodies[player_node]->applyCentralForce(btVector3(10, 0, 0));
+	  }
+
+	  if (buttonPress(FaceA))
+	  {
+		  rigid_bodies[player_node]->applyCentralForce(btVector3(0, 25, 0));
+	  }
+
+
+	  //KEY INPUTS
+	  /*if (is_key_going_down(key_up))
+	  {
+		  
+	  }
+
+	  else if (is_key_down(key_right))
+	  {
+		  
+	  }
+
+	  else if (is_key_down(key_left))
+	  {
+		  
+	  }*/
+
+	  /*if (is_key_going_down('1')||is_key_going_down(VK_NUMPAD1))
 	  {
 		  newScene();
 		  loadTxt(1);
@@ -347,16 +425,16 @@ namespace octet {
 	  {
 		  newScene();
 		  loadTxt(3);
-	  }
+	  }*/
 
 	  //flipper test
-	  if (is_key_going_down('F'))
+	  /*if (is_key_going_down('F'))
 	  {
 		  for (int i = 0; i < flippers.size(); i++)
 		  {
 			  flippers[i]->getRigidBodyA().applyTorqueImpulse(btVector3(0, 0, 50));
 		  }
-	  }
+	  }*/
     }
   };
 }
