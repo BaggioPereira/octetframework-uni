@@ -40,20 +40,18 @@ namespace octet {
 
 	mat4t worldCoord;
 	btRigidBody *staticObject;
+	btRigidBody *playerRB;
 	dynarray<btRigidBody*> rigid_bodies;
 	dynarray<btHingeConstraint*> flippers;
 	dynarray<btGeneric6DofSpringConstraint*> springBodies;
 	mesh_box *box, *flipperMesh, *blockerMesh;
 	mesh_sphere *sph;
-	material *wall, *floor, *flip, *end, *player;
+	material *wall, *floor, *flip, *end, *player, *invisWall;
 
 	scene_node *cam;
 
 	//string to hold the txt file
 	string contents;
-
-	//the player id
-	int player_node;
 
 	//Hinge variables
 	bool hingeOffsetNotSet = false;
@@ -143,8 +141,8 @@ namespace octet {
 		worldCoord.translate(position);
 		add_part(worldCoord, msh, mat, active);
 		
-		rigid_bodies.back()->setFriction(0);
-		rigid_bodies.back()->setRestitution(0);
+		//rigid_bodies.back()->setFriction(0);
+		//rigid_bodies.back()->setRestitution(0);
 
 		//static object 
 		if (letter == 'O')
@@ -155,9 +153,10 @@ namespace octet {
 		//player object
 		if (letter == 'P')
 		{
-			player_node = rigid_bodies.size() - 1; //gets the player node
-			rigid_bodies.back()->setLinearFactor(btVector3(1, 1, 0)); //constraints z axis movement
-			rigid_bodies.back()->setAngularFactor(btVector3(0, 0, 1)); //constraints x and y axis rotation
+			playerRB = rigid_bodies.back();
+			playerRB->setDamping(0, 0);
+			playerRB->setLinearFactor(btVector3(1, 1, 0)); //constraints z axis movement
+			playerRB->setAngularFactor(btVector3(0, 0, 1)); //constraints x and y axis rotation
 		}
 
 		//spring blockers
@@ -250,6 +249,12 @@ namespace octet {
 		return (state.Gamepad.wButtons & GAMEPADBUTTONS[button]) ? true : false;
 	}
 
+	//Collison check
+	void collided()
+	{
+
+	}
+
 	//clear the scene
 	void newScene()
 	{
@@ -263,8 +268,11 @@ namespace octet {
 		box = new mesh_box(0.5f);
 		flipperMesh = new mesh_box(vec3(0.5f, 0.25f, 0.5f));
 		blockerMesh = new mesh_box(vec3(0.5f, 1, 0.5f));
-		sph = new mesh_sphere(vec3(0, 0, 0), 1, 1);
+		image *transparentImg = new image("assets/transpparent.jpg");
+		image * transparentMask = new image("assets/transparent.gif");
+		param_shader *transparentShader = new param_shader("shaders/default.vs", "shaders/multitexture.fs");
 		wall = new material(vec4(1, 0, 0, 1));
+		invisWall = new material(vec4(1,1,1,1),transparentShader);
 		floor = new material(vec4(0, 1, 0, 1));
 		flip = new material(vec4(0, 0, 1, 1));
 		end = new material(vec4(1, 1, 1, 1));
@@ -344,7 +352,7 @@ namespace octet {
 				pos += vec3(1, 0, 0);
 				break;
 			case '-':
-			case '¦': add_rigid_body(pos, box, wall, c, false);
+			case '¦': add_rigid_body(pos, box, invisWall, c, false);
 				x += 1;
 				pos += vec3(1, 0, 0);
 				break;
@@ -394,17 +402,21 @@ namespace octet {
 	  {
 		  if (buttonPress(left))
 		  {
-			  rigid_bodies[player_node]->applyCentralForce(btVector3(-10, 0, 0));
+			  playerRB->applyCentralForce(btVector3(-10, 0, 0));
 		  }
 
-		  if (buttonPress(right))
+		  else if (buttonPress(right))
 		  {
-			  rigid_bodies[player_node]->applyCentralForce(btVector3(10, 0, 0));
+			  playerRB->applyCentralForce(btVector3(10, 0, 0));
 		  }
 
-		  if (buttonPress(FaceA))
+		  else if (buttonPress(FaceA))
 		  {
-			  rigid_bodies[player_node]->applyCentralForce(btVector3(0, 25, 0));
+			  playerRB->applyCentralForce(btVector3(0, 25, 0));
+		  }
+		  else
+		  {
+			  playerRB->setFriction(1.0);
 		  }
 	  }
 
@@ -414,17 +426,33 @@ namespace octet {
 		  //KEY INPUTS
 		  if (is_key_down(VK_SPACE))
 		  {
-			  rigid_bodies[player_node]->applyCentralForce(btVector3(0, 25, 0));
+			  playerRB->applyCentralForce(btVector3(0, 25, 0));
 		  }
 
 		  else if (is_key_down(key_right))
 		  {
-			  rigid_bodies[player_node]->applyCentralForce(btVector3(10, 0, 0));
+			  playerRB->applyCentralForce(btVector3(10, 0, 0));
 		  }
 
 		  else if (is_key_down(key_left))
 		  {
-			  rigid_bodies[player_node]->applyCentralForce(btVector3(-10, 0, 0));
+			  playerRB->applyCentralForce(btVector3(-10, 0, 0));
+		  }
+
+		  else if (is_key_going_down('S'))
+		  {
+			  cam->loadIdentity();
+			  cam->rotate(90, vec3(0, -1, 0));
+			  cam->translate(vec3(0,-46,-10));
+		  }
+
+		  else if (is_key_down('G'))
+		  {
+			  
+		  }
+		  else
+		  {
+			  playerRB->setFriction(1.0);
 		  }
 	  }
 
