@@ -32,23 +32,36 @@ namespace octet {
   class tandm_game : public app {
     // scene for drawing box
     ref<visual_scene> app_scene;
+
 	btDefaultCollisionConfiguration config;
 	btCollisionDispatcher *dispatcher;
 	btDbvtBroadphase *broadphase;
 	btSequentialImpulseConstraintSolver *solver;
 	btDiscreteDynamicsWorld *world;
 
+	//World coordinates
 	mat4t worldCoord;
+
+	//rigid bodies
 	btRigidBody *staticObject;
 	btRigidBody *playerRB;
+
+	//dynarrays
 	dynarray<btRigidBody*> rigid_bodies;
 	dynarray<btHingeConstraint*> flippers;
 	dynarray<btGeneric6DofSpringConstraint*> springBodies;
+
+	//meshes
 	mesh_box *box, *flipperMesh, *blockerMesh;
-	mesh_sphere *sph;
+
+	//materials
 	material *wall, *floor, *flip, *end, *player, *invisWall;
 
 	scene_node *cam;
+
+	//prepection booleans
+	bool third = true;
+	bool first = false;
 
 	//string to hold the txt file
 	string contents;
@@ -61,11 +74,12 @@ namespace octet {
 	XINPUT_STATE state;
 	DWORD dwResult;
 
+	//enums for controller
 	enum BUTTONS {
 		FaceA=0,
-		B,
-		X,
-		Y,
+		FaceB,
+		FaceX,
+		FaceY,
 		Up,
 		Down,
 		Left,
@@ -78,15 +92,15 @@ namespace octet {
 		Back
 	};
 
-	float left = Left;
-	float right = Right;
-	float up = Up;
-	float down = Down;
-	float faceA = FaceA;
-	float start = Start;
-	float back = Back;
-
 	bool controllerConnected = false;
+
+	bool yButton = false, aButton = false;
+
+	//Sounds
+	ALuint boing;
+	ALuint jump;
+	unsigned cur_source;
+	ALuint sources[2];
 
   public:
     /// this is called when we construct the class before everything is initialised.
@@ -202,6 +216,12 @@ namespace octet {
 		worldCoord.loadIdentity();
 	}
 
+	//Collison check
+	void collided()
+	{
+
+	}
+
 	//Controller functions
 	void controller()
 	{
@@ -243,16 +263,183 @@ namespace octet {
 	{
 		state = getState();
 	}
-	
+
 	bool buttonPress(int button)
 	{
 		return (state.Gamepad.wButtons & GAMEPADBUTTONS[button]) ? true : false;
 	}
 
-	//Collison check
-	void collided()
+	//movement code
+	void controls(bool controller)
 	{
+		if (controller)
+		{
+			if (third)
+			{
+				if (buttonPress(Left))
+				{
+					playerRB->activate();
+					playerRB->applyCentralForce(btVector3(-10, 0, 0));
+				}
 
+				else if (buttonPress(Right))
+				{
+					playerRB->activate();
+					playerRB->applyCentralForce(btVector3(10, 0, 0));
+				}
+			}
+
+			else if (first)
+			{
+				if (buttonPress(Down))
+				{
+					playerRB->activate();
+					playerRB->applyCentralForce(btVector3(-10, 0, 0));
+				}
+
+				else if (buttonPress(Up))
+				{
+					playerRB->activate();
+					playerRB->applyCentralForce(btVector3(10, 0, 0));
+				}
+			}
+			
+			if (aButton)
+			{
+				playerRB->activate();
+				playerRB->applyCentralForce(btVector3(0, 100, 0));
+				ALuint source = get_sound_source();
+				alSourcei(source, AL_BUFFER, jump);
+				alSourcePlay(source);
+			}
+
+			if (yButton)
+			{
+				if (third)
+				{
+					cam->loadIdentity();
+					cam->rotate(90, vec3(0, -1, 0));
+					cam->translate(vec3(0, -46, -10));
+					playerRB->clearForces();
+					third = !third;
+					first = !first;
+				}
+				else if (!third)
+				{
+					cam->loadIdentity();
+					cam->translate(vec3(24, -24, 84));
+					playerRB->clearForces();
+					third = !third;
+					first = !first;
+				}
+			}
+
+			else
+			{
+				playerRB->setFriction(1.0);
+			}
+
+		}
+
+		else if (!controller)
+		{
+			//KEY INPUTS
+			if (third)
+			{
+				if (is_key_down(key_right))
+				{
+					playerRB->activate();
+					playerRB->applyCentralForce(btVector3(10, 0, 0));
+				}
+
+				else if (is_key_down(key_left))
+				{
+					playerRB->activate();
+					playerRB->applyCentralForce(btVector3(-10, 0, 0));
+				}
+			}
+
+			else if (first)
+			{
+				if (is_key_down(key_up))
+				{
+					playerRB->activate();
+					playerRB->applyCentralForce(btVector3(10, 0, 0));
+				}
+
+				else if (is_key_down(key_down))
+				{
+					playerRB->activate();
+					playerRB->applyCentralForce(btVector3(-10, 0, 0));
+				}
+			}
+
+			if (is_key_going_down(VK_SPACE))
+			{
+				playerRB->activate();
+				playerRB->applyCentralForce(btVector3(0, 100, 0));
+				ALuint source = get_sound_source();
+				alSourcei(source, AL_BUFFER, jump);
+				alSourcePlay(source);
+			}
+
+			if (is_key_going_down('S'))
+			{
+				if (third)
+				{
+					cam->loadIdentity();
+					cam->rotate(90, vec3(0, -1, 0));
+					cam->translate(vec3(0, -46, -10));
+					playerRB->clearForces();
+					third = !third;
+					first = !first;
+				}
+				else if (!third)
+				{
+					cam->loadIdentity();
+					cam->translate(vec3(24, -24, 84));
+					playerRB->clearForces();
+					third = !third;
+					first = !first;
+				}
+			}
+
+			else
+			{
+				playerRB->setFriction(1.0);
+			}
+		}
+	}
+
+	//controller button delay
+	void buttonDelay()
+	{
+		if (!yButton)
+		{
+			yButton = state.Gamepad.wButtons & GAMEPADBUTTONS[FaceY];
+		}
+
+		else if (yButton)
+		{
+			yButton = !state.Gamepad.wButtons & GAMEPADBUTTONS[FaceY];
+		}	
+
+		if (!aButton)
+		{
+			aButton = state.Gamepad.wButtons & GAMEPADBUTTONS[FaceA];
+		}
+
+		else if (aButton)
+		{
+			aButton = !state.Gamepad.wButtons & GAMEPADBUTTONS[FaceA];
+		}
+	}
+
+	//Sound
+	//taken from Andys Invaderers example
+	ALuint get_sound_source()
+	{
+		return sources[cur_source++ % 8];
 	}
 
 	//clear the scene
@@ -264,7 +451,11 @@ namespace octet {
 		app_scene->create_default_camera_and_lights();
 		app_scene->get_camera_instance(0)->set_far_plane(1000);
 		cam = app_scene->get_camera_instance(0)->get_node();
+		printf("%g %g %g\n", cam->get_position().x(), cam->get_position().y(), cam->get_position().z());
 		cam->translate(vec3(24, -24, 50));
+		jump = resource_dict::get_sound_handle(AL_FORMAT_MONO16, "src/examples/tandm_game/jump.wav");
+		cur_source = 0;
+		alGenSources(8, sources);
 		box = new mesh_box(0.5f);
 		flipperMesh = new mesh_box(vec3(0.5f, 0.25f, 0.5f));
 		blockerMesh = new mesh_box(vec3(0.5f, 1, 0.5f));
@@ -397,64 +588,8 @@ namespace octet {
 
 	  //Controller
 	  controllerUpdate();
-
-	  if (controllerConnected)
-	  {
-		  if (buttonPress(left))
-		  {
-			  playerRB->applyCentralForce(btVector3(-10, 0, 0));
-		  }
-
-		  else if (buttonPress(right))
-		  {
-			  playerRB->applyCentralForce(btVector3(10, 0, 0));
-		  }
-
-		  else if (buttonPress(FaceA))
-		  {
-			  playerRB->applyCentralForce(btVector3(0, 25, 0));
-		  }
-		  else
-		  {
-			  playerRB->setFriction(1.0);
-		  }
-	  }
-
-	  //Keyboard
-	  else if (!controllerConnected)
-	  {
-		  //KEY INPUTS
-		  if (is_key_down(VK_SPACE))
-		  {
-			  playerRB->applyCentralForce(btVector3(0, 25, 0));
-		  }
-
-		  else if (is_key_down(key_right))
-		  {
-			  playerRB->applyCentralForce(btVector3(10, 0, 0));
-		  }
-
-		  else if (is_key_down(key_left))
-		  {
-			  playerRB->applyCentralForce(btVector3(-10, 0, 0));
-		  }
-
-		  else if (is_key_going_down('S'))
-		  {
-			  cam->loadIdentity();
-			  cam->rotate(90, vec3(0, -1, 0));
-			  cam->translate(vec3(0,-46,-10));
-		  }
-
-		  else if (is_key_down('G'))
-		  {
-			  
-		  }
-		  else
-		  {
-			  playerRB->setFriction(1.0);
-		  }
-	  }
+	  controls(controllerConnected);
+	  buttonDelay();
 
 	  /*if (is_key_going_down('1')||is_key_going_down(VK_NUMPAD1))
 	  {
