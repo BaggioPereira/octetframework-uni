@@ -358,9 +358,9 @@ namespace octet {
 				}
 			}
 
-			if (xButton)
+			if (first)
 			{
-				if (is_key_going_down('F'))
+				if (xButton)
 				{
 					flipped = !flipped;
 				}
@@ -477,12 +477,12 @@ namespace octet {
 
 		if (!xButton)
 		{
-			xButton = state.Gamepad.wButtons & GAMEPADBUTTONS[FaceA];
+			xButton = state.Gamepad.wButtons & GAMEPADBUTTONS[FaceX];
 		}
 
 		else if (xButton)
 		{
-			xButton = !state.Gamepad.wButtons & GAMEPADBUTTONS[FaceA];
+			xButton = !state.Gamepad.wButtons & GAMEPADBUTTONS[FaceX];
 		}
 	}
 
@@ -685,6 +685,7 @@ namespace octet {
 	  controls(controllerConnected);
 	  buttonDelay();
 
+	  //Camera update
 	  if (third)
 	  {
 		  cam->loadIdentity();
@@ -711,24 +712,6 @@ namespace octet {
 			  cam->translate(vec3(camToWorld.w().z(), camToWorld.w().y(), camToWorld.w().x()));
 		  }
 	  }
-	  //call a check for collisions
-	  //collided();
-
-	  /*if (is_key_going_down('1')||is_key_going_down(VK_NUMPAD1))
-	  {
-		  newScene();
-		  loadTxt(1);
-	  }
-	  if (is_key_going_down('2') || is_key_going_down(VK_NUMPAD2))
-	  {
-		  newScene();
-		  loadTxt(2);
-	  }
-	  if (is_key_going_down('3') || is_key_going_down(VK_NUMPAD3))
-	  {
-		  newScene();
-		  loadTxt(3);
-	  }*/
     }
   };
 }
