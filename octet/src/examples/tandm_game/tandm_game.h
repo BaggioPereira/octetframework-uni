@@ -32,28 +32,48 @@ namespace octet {
   class tandm_game : public app {
     // scene for drawing box
     ref<visual_scene> app_scene;
+
 	btDefaultCollisionConfiguration config;
 	btCollisionDispatcher *dispatcher;
 	btDbvtBroadphase *broadphase;
 	btSequentialImpulseConstraintSolver *solver;
 	btDiscreteDynamicsWorld *world;
 
+	//World coordinates
 	mat4t worldCoord;
+
+	//rigid bodies
 	btRigidBody *staticObject;
+	btRigidBody *playerRB;
+
+	//dynarrays
 	dynarray<btRigidBody*> rigid_bodies;
 	dynarray<btHingeConstraint*> flippers;
 	dynarray<btGeneric6DofSpringConstraint*> springBodies;
-	mesh_box *box, *flipperMesh, *blockerMesh;
-	mesh_sphere *sph;
-	material *wall, *floor, *flip, *end, *player;
+	dynarray<scene_node*> nodes;
 
-	scene_node *cam;
+	//meshes
+	mesh_box *box, *flipperMesh, *blockerMesh;
+
+	//materials
+	material *wall, *floor, *flip, *end, *player, *invisWall;
+
+	scene_node *cam, *playerNode;
+	mat4t camToWorld;
+
+	enum objs {
+		PLAYER = 0,
+		BLOCKER,
+		FLIPPER
+	};
+
+	//prepection booleans
+	bool third = true;
+	bool first = false;
+	bool flipped = false;
 
 	//string to hold the txt file
 	string contents;
-
-	//the player id
-	int player_node;
 
 	//Hinge variables
 	bool hingeOffsetNotSet = false;
@@ -63,11 +83,12 @@ namespace octet {
 	XINPUT_STATE state;
 	DWORD dwResult;
 
+	//enums for controller
 	enum BUTTONS {
 		FaceA=0,
-		B,
-		X,
-		Y,
+		FaceB,
+		FaceX,
+		FaceY,
 		Up,
 		Down,
 		Left,
@@ -80,15 +101,15 @@ namespace octet {
 		Back
 	};
 
-	float left = Left;
-	float right = Right;
-	float up = Up;
-	float down = Down;
-	float faceA = FaceA;
-	float start = Start;
-	float back = Back;
-
 	bool controllerConnected = false;
+
+	bool yButton = false, aButton = false;
+
+	//Sounds
+	ALuint boing;
+	ALuint jump;
+	unsigned cur_source;
+	ALuint sources[2];
 
   public:
     /// this is called when we construct the class before everything is initialised.
@@ -110,12 +131,13 @@ namespace octet {
 	}
 
 	//add a mesh with rigid body
-	void add_part(mat4t_in coord, mesh *shape, material *mat, bool is_dynamic)
+	void add_part(mat4t_in coord, mesh *shape, material *mat, bool is_dynamic,char letter)
 	{
 		scene_node *node = new scene_node();
 		node->access_nodeToParent() = coord;
 		app_scene->add_child(node);
 		app_scene->add_mesh_instance(new mesh_instance(node, shape, mat));
+		nodes.push_back(node);
 
 		btMatrix3x3 matrix(get_btMatrix3x3(coord));
 		btVector3 pos(get_btVector3(coord[3].xyz()));
@@ -131,9 +153,23 @@ namespace octet {
 			collisionShape->calculateLocalInertia(mass, inertiaTensor);
 
 			btRigidBody *rigid_body = new btRigidBody(mass, motionState, collisionShape, inertiaTensor);
+			
 			world->addRigidBody(rigid_body);
 			rigid_bodies.push_back(rigid_body);
-			rigid_body->setUserPointer(node);
+			//rigid_body->setUserPointer(node);
+			if (letter == 'P')
+			{
+				
+			}
+			else if (letter == 'B')
+			{
+				
+			}
+			else if (letter == 'F')
+			{
+				
+			}
+			
 		}
 	}
 
@@ -141,10 +177,10 @@ namespace octet {
 	void add_rigid_body(vec3 position, mesh *msh, material *mat, char letter, bool active)
 	{
 		worldCoord.translate(position);
-		add_part(worldCoord, msh, mat, active);
+		add_part(worldCoord, msh, mat, active,letter);
 		
-		rigid_bodies.back()->setFriction(0);
-		rigid_bodies.back()->setRestitution(0);
+		//rigid_bodies.back()->setFriction(0);
+		//rigid_bodies.back()->setRestitution(0);
 
 		//static object 
 		if (letter == 'O')
@@ -155,9 +191,14 @@ namespace octet {
 		//player object
 		if (letter == 'P')
 		{
-			player_node = rigid_bodies.size() - 1; //gets the player node
-			rigid_bodies.back()->setLinearFactor(btVector3(1, 1, 0)); //constraints z axis movement
-			rigid_bodies.back()->setAngularFactor(btVector3(0, 0, 1)); //constraints x and y axis rotation
+			playerRB = rigid_bodies.back();
+			playerNode = nodes.back();
+			playerRB->setUserIndex(PLAYER);
+			int index = playerRB->getUserIndex();
+			printf("%g\n", index);
+			playerRB->setDamping(0, 0);
+			playerRB->setLinearFactor(btVector3(1, 1, 0)); //constraints z axis movement
+			playerRB->setAngularFactor(btVector3(0, 0, 1)); //constraints x and y axis rotation
 		}
 
 		//spring blockers
@@ -168,6 +209,7 @@ namespace octet {
 			localB.setIdentity();
 			localA.getOrigin() = btVector3(position.x(), position.y(), position.z());
 			btRigidBody *springBody = rigid_bodies.back();
+			springBody->setUserIndex(BLOCKER);
 			springBody->setLinearFactor(btVector3(0, 1, 0));
 			btGeneric6DofSpringConstraint *springConstraint = new btGeneric6DofSpringConstraint(*staticObject, *springBody, localA, localB, true);
 			springConstraint->setLimit(0, 0, 0); //X Axis
@@ -195,7 +237,9 @@ namespace octet {
 			}
 			
 			btRigidBody *hingeBody = rigid_bodies.back();
+			hingeBody->setUserIndex(FLIPPER);
 			btHingeConstraint *flipperHinge =new btHingeConstraint(*hingeBody, offset, btVector3(0, 0, 1));
+			flipperHinge->enableAngularMotor(true, 10, 1000);
 			world->addConstraint(flipperHinge);
 			flippers.push_back(flipperHinge);
 		}
@@ -244,10 +288,205 @@ namespace octet {
 	{
 		state = getState();
 	}
-	
+
 	bool buttonPress(int button)
 	{
 		return (state.Gamepad.wButtons & GAMEPADBUTTONS[button]) ? true : false;
+	}
+
+	//movement code
+	void controls(bool controller)
+	{
+		if (controller)
+		{
+			if (third)
+			{
+				if (buttonPress(Left))
+				{
+					playerRB->activate();
+					playerRB->applyCentralForce(btVector3(-10, 0, 0));
+				}
+
+				else if (buttonPress(Right))
+				{
+					playerRB->activate();
+					playerRB->applyCentralForce(btVector3(10, 0, 0));
+				}
+			}
+
+			else if (first)
+			{
+				if (buttonPress(Down))
+				{
+					playerRB->activate();
+					if (!flipped)
+						playerRB->applyCentralForce(btVector3(-10, 0, 0));
+					else
+						playerRB->applyCentralForce(btVector3(10, 0, 0));
+				}
+
+				else if (buttonPress(Up))
+				{
+					playerRB->activate();
+					if (!flipped)
+						playerRB->applyCentralForce(btVector3(10, 0, 0));
+					else
+						playerRB->applyCentralForce(btVector3(-10, 0, 0));
+				}
+			}
+			
+			if (aButton)
+			{
+				playerRB->activate();
+				playerRB->applyCentralForce(btVector3(0, 100, 0));
+				ALuint source = get_sound_source();
+				alSourcei(source, AL_BUFFER, jump);
+				alSourcePlay(source);
+			}
+
+			if (yButton)
+			{
+				if (third)
+				{
+					cam->loadIdentity();
+					cam->rotate(90, vec3(0, -1, 0));
+					cam->translate(vec3(0, -46, -10));
+					playerRB->clearForces();
+					third = !third;
+					first = !first;
+				}
+				else if (!third)
+				{
+					cam->loadIdentity();
+					cam->translate(vec3(24, -24, 84));
+					playerRB->clearForces();
+					third = !third;
+					first = !first;
+				}
+			}
+
+			else
+			{
+				playerRB->setFriction(1.0);
+			}
+
+		}
+
+		else if (!controller)
+		{
+			//KEY INPUTS
+			if (third)
+			{
+				if (is_key_down(key_right))
+				{
+					playerRB->activate();
+					playerRB->applyCentralForce(btVector3(10, 0, 0));
+				}
+
+				else if (is_key_down(key_left))
+				{
+					playerRB->activate();
+					playerRB->applyCentralForce(btVector3(-10, 0, 0));
+				}
+			}
+
+			else if (first)
+			{
+				if (is_key_down(key_up))
+				{
+					playerRB->activate();
+					if (!flipped)
+						playerRB->applyCentralForce(btVector3(10, 0, 0));
+					else
+						playerRB->applyCentralForce(btVector3(-10, 0, 0));
+				}
+
+				else if (is_key_down(key_down))
+				{
+					playerRB->activate();
+					if (!flipped)
+						playerRB->applyCentralForce(btVector3(-10, 0, 0));
+					else
+						playerRB->applyCentralForce(btVector3(10, 0, 0));
+				}
+			}
+
+			if (is_key_going_down(VK_SPACE))
+			{
+				playerRB->activate();
+				playerRB->applyCentralForce(btVector3(0, 100, 0));
+				ALuint source = get_sound_source();
+				alSourcei(source, AL_BUFFER, jump);
+				alSourcePlay(source);
+			}
+
+			if (is_key_going_down('S'))
+			{
+				if (third)
+				{
+					//cam->loadIdentity();
+					//cam->rotate(90, vec3(0, -1, 0));
+					//camToWorld = cam->access_nodeToParent();
+					//camToWorld.w()=(playerNode->get_position() + vec3(-1.5f,1.25f,0)).xyz1();
+					////printf("%g %g %g \n", camToWorld.w().x(), camToWorld.w().y(), camToWorld.w().z());
+					//cam->translate(vec3(camToWorld.w().z(), camToWorld.w().y(), camToWorld.w().x()));
+					playerRB->clearForces();
+					third = !third;
+					first = !first;
+				}
+				else if (!third)
+				{
+					
+					playerRB->clearForces();
+					third = !third;
+					first = !first;
+				}
+			}
+
+			if (first)
+			{
+				if (is_key_going_down('F'))
+				{
+					flipped = !flipped;
+				}
+			}
+
+			else
+			{
+				playerRB->setFriction(1.0);
+			}
+		}
+	}
+
+	//controller button delay
+	void buttonDelay()
+	{
+		if (!yButton)
+		{
+			yButton = state.Gamepad.wButtons & GAMEPADBUTTONS[FaceY];
+		}
+
+		else if (yButton)
+		{
+			yButton = !state.Gamepad.wButtons & GAMEPADBUTTONS[FaceY];
+		}	
+
+		if (!aButton)
+		{
+			aButton = state.Gamepad.wButtons & GAMEPADBUTTONS[FaceA];
+		}
+
+		else if (aButton)
+		{
+			aButton = !state.Gamepad.wButtons & GAMEPADBUTTONS[FaceA];
+		}
+	}
+
+	//Sound
+	//taken from Andys Invaderers example
+	ALuint get_sound_source()
+	{
+		return sources[cur_source++ % 8];
 	}
 
 	//clear the scene
@@ -260,11 +499,17 @@ namespace octet {
 		app_scene->get_camera_instance(0)->set_far_plane(1000);
 		cam = app_scene->get_camera_instance(0)->get_node();
 		cam->translate(vec3(24, -24, 50));
+		jump = resource_dict::get_sound_handle(AL_FORMAT_MONO16, "src/examples/tandm_game/jump.wav");
+		cur_source = 0;
+		alGenSources(8, sources);
 		box = new mesh_box(0.5f);
 		flipperMesh = new mesh_box(vec3(0.5f, 0.25f, 0.5f));
 		blockerMesh = new mesh_box(vec3(0.5f, 1, 0.5f));
-		sph = new mesh_sphere(vec3(0, 0, 0), 1, 1);
+		image *transparentImg = new image("assets/transpparent.jpg");
+		image * transparentMask = new image("assets/transparent.gif");
+		param_shader *transparentShader = new param_shader("shaders/default.vs", "shaders/multitexture.fs");
 		wall = new material(vec4(1, 0, 0, 1));
+		invisWall = new material(vec4(1,1,1,1),transparentShader);
 		floor = new material(vec4(0, 1, 0, 1));
 		flip = new material(vec4(0, 0, 1, 1));
 		end = new material(vec4(1, 1, 1, 1));
@@ -344,7 +589,7 @@ namespace octet {
 				pos += vec3(1, 0, 0);
 				break;
 			case '-':
-			case '¦': add_rigid_body(pos, box, wall, c, false);
+			case '¦': add_rigid_body(pos, box, invisWall, c, false);
 				x += 1;
 				pos += vec3(1, 0, 0);
 				break;
@@ -369,16 +614,41 @@ namespace octet {
       app_scene->begin_render(vx, vy);
 
 	  world->stepSimulation(1.0f / 30, 1.0f / 30, 1.0f / 30);
-	  btCollisionObjectArray &colArray = world->getCollisionObjectArray();
-	  for (unsigned i = 0; i != colArray.size(); ++i)
+
+	  //Collision checks
+	  int manifolds = world->getDispatcher()->getNumManifolds();
+	  for (int i = 0; i < manifolds; i++)
 	  {
-		  btCollisionObject *colObj = colArray[i];
-		  scene_node *node = (scene_node *)colObj->getUserPointer();
-		  if (node)
+		  btPersistentManifold* contact = world->getDispatcher()->getManifoldByIndexInternal(i);
+		  int obj1 = contact->getBody0()->getUserIndex();
+		  int obj2 = contact->getBody1()->getUserIndex();
+		  if (obj1 == PLAYER || obj2 == PLAYER)
 		  {
-			  mat4t &modelToWorld = node->access_nodeToParent();
-			  colObj->getWorldTransform().getOpenGLMatrix(modelToWorld.get());
+			  if (obj2 == BLOCKER)
+			  {
+				  ALuint source = get_sound_source();
+				  alSourcei(source, AL_BUFFER, jump);
+				  alSourcePlay(source);
+			  }
+
+			  else if (obj2 == FLIPPER)
+			  {
+				  ALuint source = get_sound_source();
+				  alSourcei(source, AL_BUFFER, jump);
+				  alSourcePlay(source);
+			  }
 		  }
+	  }
+
+	  //Physics setup
+	  for (unsigned i = 0; i != rigid_bodies.size(); ++i) {
+		  btRigidBody *rigid_body = rigid_bodies[i];
+		  btQuaternion btq = rigid_body->getOrientation();
+		  btVector3 pos = rigid_body->getCenterOfMassPosition();
+		  quat q(btq[0], btq[1], btq[2], btq[3]);
+		  mat4t modelToWorld = q;
+		  modelToWorld[3] = vec4(pos[0], pos[1], pos[2], 1);
+		  nodes[i]->access_nodeToParent() = modelToWorld;
 	  }
 
       // update matrices. assume 30 fps.
@@ -389,44 +659,37 @@ namespace octet {
 
 	  //Controller
 	  controllerUpdate();
+	  controls(controllerConnected);
+	  buttonDelay();
 
-	  if (controllerConnected)
+	  if (third)
 	  {
-		  if (buttonPress(left))
-		  {
-			  rigid_bodies[player_node]->applyCentralForce(btVector3(-10, 0, 0));
-		  }
-
-		  if (buttonPress(right))
-		  {
-			  rigid_bodies[player_node]->applyCentralForce(btVector3(10, 0, 0));
-		  }
-
-		  if (buttonPress(FaceA))
-		  {
-			  rigid_bodies[player_node]->applyCentralForce(btVector3(0, 25, 0));
-		  }
+		  cam->loadIdentity();
+		  camToWorld = cam->access_nodeToParent();
+		  camToWorld.w() = (playerNode->get_position() + vec3(0, 0, 50.0f)).xyz1();
+		  cam->translate(vec3(camToWorld.w().x(), camToWorld.w().y(), camToWorld.w().z()));
 	  }
 
-	  //Keyboard
-	  else if (!controllerConnected)
+	  else if (first)
 	  {
-		  //KEY INPUTS
-		  if (is_key_down(VK_SPACE))
+		  cam->loadIdentity();
+		  if (!flipped)
 		  {
-			  rigid_bodies[player_node]->applyCentralForce(btVector3(0, 25, 0));
+			  cam->rotate(90, vec3(0, -1, 0));
+			  camToWorld = cam->access_nodeToParent();
+			  camToWorld.w() = (playerNode->get_position() + vec3(-4.5f, 1.25f, 0.0f)).xyz1();
+			  cam->translate(vec3(camToWorld.w().z(), camToWorld.w().y(), -camToWorld.w().x()));
 		  }
-
-		  else if (is_key_down(key_right))
+		  else if (flipped)
 		  {
-			  rigid_bodies[player_node]->applyCentralForce(btVector3(10, 0, 0));
-		  }
-
-		  else if (is_key_down(key_left))
-		  {
-			  rigid_bodies[player_node]->applyCentralForce(btVector3(-10, 0, 0));
+			  cam->rotate(90, vec3(0, 1, 0));
+			  camToWorld = cam->access_nodeToParent();
+			  camToWorld.w() = (playerNode->get_position() + vec3(4.5f, 1.25f, 0.0f)).xyz1();
+			  cam->translate(vec3(camToWorld.w().z(), camToWorld.w().y(), camToWorld.w().x()));
 		  }
 	  }
+	  //call a check for collisions
+	  //collided();
 
 	  /*if (is_key_going_down('1')||is_key_going_down(VK_NUMPAD1))
 	  {
