@@ -103,7 +103,7 @@ namespace octet {
 
 	bool controllerConnected = false;
 
-	bool yButton = false, aButton = false;
+	bool yButton = false, aButton = false, xButton = false;
 
 	//Sounds
 	ALuint boing;
@@ -195,7 +195,6 @@ namespace octet {
 			playerNode = nodes.back();
 			playerRB->setUserIndex(PLAYER);
 			int index = playerRB->getUserIndex();
-			printf("%g\n", index);
 			playerRB->setDamping(0, 0);
 			playerRB->setLinearFactor(btVector3(1, 1, 0)); //constraints z axis movement
 			playerRB->setAngularFactor(btVector3(0, 0, 1)); //constraints x and y axis rotation
@@ -232,7 +231,6 @@ namespace octet {
 			{
 				offset = get_btVector3(flipperMesh->get_aabb().get_max());
 				offset = btVector3(offset.x()*0.5f, offset.y()*0.0f, offset.z()*0.0f);
-				printf("%g %g %g\n", offset.x(), offset.y(), offset.z());
 				hingeOffsetNotSet = true;
 			}
 			
@@ -348,20 +346,23 @@ namespace octet {
 			{
 				if (third)
 				{
-					cam->loadIdentity();
-					cam->rotate(90, vec3(0, -1, 0));
-					cam->translate(vec3(0, -46, -10));
 					playerRB->clearForces();
 					third = !third;
 					first = !first;
 				}
 				else if (!third)
 				{
-					cam->loadIdentity();
-					cam->translate(vec3(24, -24, 84));
 					playerRB->clearForces();
 					third = !third;
 					first = !first;
+				}
+			}
+
+			if (xButton)
+			{
+				if (is_key_going_down('F'))
+				{
+					flipped = !flipped;
 				}
 			}
 
@@ -424,19 +425,12 @@ namespace octet {
 			{
 				if (third)
 				{
-					//cam->loadIdentity();
-					//cam->rotate(90, vec3(0, -1, 0));
-					//camToWorld = cam->access_nodeToParent();
-					//camToWorld.w()=(playerNode->get_position() + vec3(-1.5f,1.25f,0)).xyz1();
-					////printf("%g %g %g \n", camToWorld.w().x(), camToWorld.w().y(), camToWorld.w().z());
-					//cam->translate(vec3(camToWorld.w().z(), camToWorld.w().y(), camToWorld.w().x()));
 					playerRB->clearForces();
 					third = !third;
 					first = !first;
 				}
 				else if (!third)
 				{
-					
 					playerRB->clearForces();
 					third = !third;
 					first = !first;
@@ -480,6 +474,16 @@ namespace octet {
 		{
 			aButton = !state.Gamepad.wButtons & GAMEPADBUTTONS[FaceA];
 		}
+
+		if (!xButton)
+		{
+			xButton = state.Gamepad.wButtons & GAMEPADBUTTONS[FaceA];
+		}
+
+		else if (xButton)
+		{
+			xButton = !state.Gamepad.wButtons & GAMEPADBUTTONS[FaceA];
+		}
 	}
 
 	//Sound
@@ -516,6 +520,24 @@ namespace octet {
 		player = new material(vec4(0, 1, 1, 0));
 		offset = btVector3(0, 0, 0);
 		controller();
+		printf("Keyboard Controls\n");
+		printf("Up arrow to move forward in 1st Person\n");
+		printf("Down arrow to move backward in 1st Person\n");
+		printf("Left arrow to move left in 3st Person\n");
+		printf("Right arrow to move right in 3st Person\n");
+		printf("Space to jump\n");
+		printf("S Key to switch from 3rd Person to 1st Person and vice-versa\n");
+		printf("F Key to flip in 1st Person\n");
+
+		printf("\n\n");
+		printf("Controller Controls\n");
+		printf("DPad Up to move forward in 1st Person\n");
+		printf("DPad Down to move backward in 1st Person\n");
+		printf("DPad Left to move left in 3st Person\n");
+		printf("DPad Right to move right in 3st Person\n");
+		printf("A to jump\n");
+		printf("Y to switch from 3rd Person to 1st Person and vice-versa\n");
+		printf("X to flip in 1st Person\n");
 	}
 
 	//read txt file and get level data
