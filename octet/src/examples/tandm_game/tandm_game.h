@@ -504,6 +504,7 @@ namespace octet {
 		cam = app_scene->get_camera_instance(0)->get_node();
 		cam->translate(vec3(24, -24, 50));
 		jump = resource_dict::get_sound_handle(AL_FORMAT_MONO16, "src/examples/tandm_game/jump.wav");
+		boing = resource_dict::get_sound_handle(AL_FORMAT_MONO16, "src/examples/tandm_game/hit.wav");
 		cur_source = 0;
 		alGenSources(8, sources);
 		box = new mesh_box(0.5f);
@@ -649,14 +650,14 @@ namespace octet {
 			  if (obj2 == BLOCKER)
 			  {
 				  ALuint source = get_sound_source();
-				  alSourcei(source, AL_BUFFER, jump);
+				  alSourcei(source, AL_BUFFER, boing);
 				  alSourcePlay(source);
 			  }
 
 			  else if (obj2 == FLIPPER)
 			  {
 				  ALuint source = get_sound_source();
-				  alSourcei(source, AL_BUFFER, jump);
+				  alSourcei(source, AL_BUFFER, boing);
 				  alSourcePlay(source);
 			  }
 		  }
