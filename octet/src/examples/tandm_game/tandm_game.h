@@ -58,7 +58,8 @@ namespace octet {
 	//materials
 	material *wall, *floor, *flip, *end, *player, *invisWall;
 
-	scene_node *cam;
+	scene_node *cam, *playerNode;
+	mat4t camToWorld;
 
 	enum objs {
 		PLAYER = 0,
@@ -69,6 +70,7 @@ namespace octet {
 	//prepection booleans
 	bool third = true;
 	bool first = false;
+	bool flipped = false;
 
 	//string to hold the txt file
 	string contents;
@@ -190,6 +192,7 @@ namespace octet {
 		if (letter == 'P')
 		{
 			playerRB = rigid_bodies.back();
+			playerNode = nodes.back();
 			playerRB->setUserIndex(PLAYER);
 			int index = playerRB->getUserIndex();
 			printf("%g\n", index);
@@ -236,17 +239,12 @@ namespace octet {
 			btRigidBody *hingeBody = rigid_bodies.back();
 			hingeBody->setUserIndex(FLIPPER);
 			btHingeConstraint *flipperHinge =new btHingeConstraint(*hingeBody, offset, btVector3(0, 0, 1));
+			flipperHinge->enableAngularMotor(true, 10, 1000);
 			world->addConstraint(flipperHinge);
 			flippers.push_back(flipperHinge);
 		}
 
 		worldCoord.loadIdentity();
-	}
-
-	//Collison check, if player objects hits hinge object or spring object
-	void collided()
-	{
-		
 	}
 
 	//Controller functions
@@ -321,13 +319,19 @@ namespace octet {
 				if (buttonPress(Down))
 				{
 					playerRB->activate();
-					playerRB->applyCentralForce(btVector3(-10, 0, 0));
+					if (!flipped)
+						playerRB->applyCentralForce(btVector3(-10, 0, 0));
+					else
+						playerRB->applyCentralForce(btVector3(10, 0, 0));
 				}
 
 				else if (buttonPress(Up))
 				{
 					playerRB->activate();
-					playerRB->applyCentralForce(btVector3(10, 0, 0));
+					if (!flipped)
+						playerRB->applyCentralForce(btVector3(10, 0, 0));
+					else
+						playerRB->applyCentralForce(btVector3(-10, 0, 0));
 				}
 			}
 			
@@ -335,9 +339,9 @@ namespace octet {
 			{
 				playerRB->activate();
 				playerRB->applyCentralForce(btVector3(0, 100, 0));
-				/*ALuint source = get_sound_source();
+				ALuint source = get_sound_source();
 				alSourcei(source, AL_BUFFER, jump);
-				alSourcePlay(source);*/
+				alSourcePlay(source);
 			}
 
 			if (yButton)
@@ -391,13 +395,19 @@ namespace octet {
 				if (is_key_down(key_up))
 				{
 					playerRB->activate();
-					playerRB->applyCentralForce(btVector3(10, 0, 0));
+					if (!flipped)
+						playerRB->applyCentralForce(btVector3(10, 0, 0));
+					else
+						playerRB->applyCentralForce(btVector3(-10, 0, 0));
 				}
 
 				else if (is_key_down(key_down))
 				{
 					playerRB->activate();
-					playerRB->applyCentralForce(btVector3(-10, 0, 0));
+					if (!flipped)
+						playerRB->applyCentralForce(btVector3(-10, 0, 0));
+					else
+						playerRB->applyCentralForce(btVector3(10, 0, 0));
 				}
 			}
 
@@ -414,20 +424,30 @@ namespace octet {
 			{
 				if (third)
 				{
-					cam->loadIdentity();
-					cam->rotate(90, vec3(0, -1, 0));
-					cam->translate(vec3(0, -46, -10));
+					//cam->loadIdentity();
+					//cam->rotate(90, vec3(0, -1, 0));
+					//camToWorld = cam->access_nodeToParent();
+					//camToWorld.w()=(playerNode->get_position() + vec3(-1.5f,1.25f,0)).xyz1();
+					////printf("%g %g %g \n", camToWorld.w().x(), camToWorld.w().y(), camToWorld.w().z());
+					//cam->translate(vec3(camToWorld.w().z(), camToWorld.w().y(), camToWorld.w().x()));
 					playerRB->clearForces();
 					third = !third;
 					first = !first;
 				}
 				else if (!third)
 				{
-					cam->loadIdentity();
-					cam->translate(vec3(24, -24, 84));
+					
 					playerRB->clearForces();
 					third = !third;
 					first = !first;
+				}
+			}
+
+			if (first)
+			{
+				if (is_key_going_down('F'))
+				{
+					flipped = !flipped;
 				}
 			}
 
@@ -478,7 +498,6 @@ namespace octet {
 		app_scene->create_default_camera_and_lights();
 		app_scene->get_camera_instance(0)->set_far_plane(1000);
 		cam = app_scene->get_camera_instance(0)->get_node();
-		printf("%g %g %g\n", cam->get_position().x(), cam->get_position().y(), cam->get_position().z());
 		cam->translate(vec3(24, -24, 50));
 		jump = resource_dict::get_sound_handle(AL_FORMAT_MONO16, "src/examples/tandm_game/jump.wav");
 		cur_source = 0;
@@ -595,18 +614,8 @@ namespace octet {
       app_scene->begin_render(vx, vy);
 
 	  world->stepSimulation(1.0f / 30, 1.0f / 30, 1.0f / 30);
-	  /*btCollisionObjectArray &colArray = world->getCollisionObjectArray();
-	  for (unsigned i = 0; i != colArray.size(); ++i)
-	  {
-		  btCollisionObject *colObj = colArray[i];
-		  scene_node *node = (scene_node *)colObj->getUserPointer();
-		  if (node)
-		  {
-			  mat4t &modelToWorld = node->access_nodeToParent();
-			  colObj->getWorldTransform().getOpenGLMatrix(modelToWorld.get());
-		  }
-	  }*/
 
+	  //Collision checks
 	  int manifolds = world->getDispatcher()->getNumManifolds();
 	  for (int i = 0; i < manifolds; i++)
 	  {
@@ -617,7 +626,6 @@ namespace octet {
 		  {
 			  if (obj2 == BLOCKER)
 			  {
-				  printf("hit the blockers");
 				  ALuint source = get_sound_source();
 				  alSourcei(source, AL_BUFFER, jump);
 				  alSourcePlay(source);
@@ -625,7 +633,6 @@ namespace octet {
 
 			  else if (obj2 == FLIPPER)
 			  {
-				  printf("hit the flipper");
 				  ALuint source = get_sound_source();
 				  alSourcei(source, AL_BUFFER, jump);
 				  alSourcePlay(source);
@@ -633,6 +640,7 @@ namespace octet {
 		  }
 	  }
 
+	  //Physics setup
 	  for (unsigned i = 0; i != rigid_bodies.size(); ++i) {
 		  btRigidBody *rigid_body = rigid_bodies[i];
 		  btQuaternion btq = rigid_body->getOrientation();
@@ -652,9 +660,34 @@ namespace octet {
 	  //Controller
 	  controllerUpdate();
 	  controls(controllerConnected);
-	  collided();
 	  buttonDelay();
 
+	  if (third)
+	  {
+		  cam->loadIdentity();
+		  camToWorld = cam->access_nodeToParent();
+		  camToWorld.w() = (playerNode->get_position() + vec3(0, 0, 50.0f)).xyz1();
+		  cam->translate(vec3(camToWorld.w().x(), camToWorld.w().y(), camToWorld.w().z()));
+	  }
+
+	  else if (first)
+	  {
+		  cam->loadIdentity();
+		  if (!flipped)
+		  {
+			  cam->rotate(90, vec3(0, -1, 0));
+			  camToWorld = cam->access_nodeToParent();
+			  camToWorld.w() = (playerNode->get_position() + vec3(-4.5f, 1.25f, 0.0f)).xyz1();
+			  cam->translate(vec3(camToWorld.w().z(), camToWorld.w().y(), -camToWorld.w().x()));
+		  }
+		  else if (flipped)
+		  {
+			  cam->rotate(90, vec3(0, 1, 0));
+			  camToWorld = cam->access_nodeToParent();
+			  camToWorld.w() = (playerNode->get_position() + vec3(4.5f, 1.25f, 0.0f)).xyz1();
+			  cam->translate(vec3(camToWorld.w().z(), camToWorld.w().y(), camToWorld.w().x()));
+		  }
+	  }
 	  //call a check for collisions
 	  //collided();
 
