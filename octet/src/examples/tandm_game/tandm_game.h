@@ -74,6 +74,7 @@ namespace octet {
 
 	//string to hold the txt file
 	string contents;
+	bool multipart = false;
 
 	//Hinge variables
 	bool hingeOffsetNotSet = false;
@@ -508,8 +509,8 @@ namespace octet {
 		cur_source = 0;
 		alGenSources(8, sources);
 		box = new mesh_box(0.5f);
-		flipperMesh = new mesh_box(vec3(0.5f, 0.25f, 0.5f));
-		blockerMesh = new mesh_box(vec3(0.5f, 1, 0.5f));
+		flipperMesh = new mesh_box(vec3(0.5f, 0.25f, 0.25f));
+		blockerMesh = new mesh_box(vec3(0.5f, 1, 0.25f));
 		image *transparentImg = new image("assets/transpparent.jpg");
 		image * transparentMask = new image("assets/transparent.gif");
 		param_shader *transparentShader = new param_shader("shaders/default.vs", "shaders/multitexture.fs");
@@ -542,11 +543,11 @@ namespace octet {
 	}
 
 	//read txt file and get level data
-	void loadTxt(int num)
+	void loadTxt()
 	{
 		std::fstream myFile;
 		std::stringstream fileName;
-		fileName << "level" <<num<< ".txt";
+		fileName << "level.txt";
 		myFile.open(fileName.str().c_str(), std::ios::in);
 		if (!myFile.is_open())
 		{
@@ -566,17 +567,54 @@ namespace octet {
 			myFile.close();
 
 			contents = file.str().c_str();
-			//printf("%s\n", contents.c_str());
-			createLevel();
+			printf("%s\n", contents.c_str());
+			levelCreate();
 		}
 	}
 
-	//create the level according to the txt file
-	void createLevel()
+	int findPosition(char letter,int start)
 	{
-		vec3 pos = vec3(0, 0, 0);
+		for (int i = start; i < contents.size(); i++)
+		{
+			if (contents[i] == letter)
+			{
+				return i;
+			}
+		}
+		return -1;
+	}
+
+	void levelCreate()
+	{
+		if (contents.find("MultiPart") == -1)
+		{
+			createLevelArea(0, contents.size(), 0);
+		}
+
+		else
+		{
+			int startLoc = contents.find("Mid") + 3;
+			int endLoc = findPosition(';', startLoc);
+			printf("%d\n", startLoc);
+			createLevelArea(startLoc, endLoc, 0);
+
+
+			startLoc = contents.find("Front") + 5;
+			endLoc = findPosition(';', startLoc);
+			createLevelArea(startLoc, endLoc, 1);
+
+			startLoc = contents.find("Back") + 4;
+			endLoc = findPosition(';', startLoc);
+			createLevelArea(startLoc, endLoc, -1);
+		}			
+	}
+
+	//create the level according to the txt file
+	void createLevelArea(int startLoc, int endLoc, int z)
+	{
+		vec3 pos = vec3(0, 0, z);
 		int x = 0;
-		for (int i = 0; i < contents.size(); i++)
+		for (int i = startLoc; i < endLoc; i++)
 		{
 			char c = contents[i];
 			switch (c)
@@ -626,7 +664,7 @@ namespace octet {
 	{
       app_scene =  new visual_scene();
 	  newScene();
-	  loadTxt(2);
+	  loadTxt();
     }
 
     /// this is called to draw the world
@@ -645,7 +683,7 @@ namespace octet {
 		  btPersistentManifold* contact = world->getDispatcher()->getManifoldByIndexInternal(i);
 		  int obj1 = contact->getBody0()->getUserIndex();
 		  int obj2 = contact->getBody1()->getUserIndex();
-		  if (obj1 == PLAYER || obj2 == PLAYER)
+		  if (obj1 == PLAYER)
 		  {
 			  if (obj2 == BLOCKER)
 			  {
