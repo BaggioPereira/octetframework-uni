@@ -12,7 +12,7 @@ This reads in the entire text file and stores it into memory where it will be us
 After the text file has be read in, we will build the level.
 To build the level, I have used multiple functions so it creates the level correctly.
 First I use levelCreate():
-![alt text]()
+![alt text](https://github.com/BaggioPereira/octetframework-uni/blob/master/octet/src/examples/tandm_game/Images/level%20create.JPG "Level Create")
 
 This gets a specific portion of the text file before it begins to create it. It also checks to see if the level data has a 3 lane layout or a single lane layout.
 Next I use createLevelArea():
@@ -30,7 +30,7 @@ These restrictions will change when switching views.
 
 I also created a function that clears and resets the scene and also defines all the materials, mesh sizes, loads any shaders and sounds.
 And also it prints out the controls to the console so the player knows the controls.
-![alt text]()
+![alt text](https://github.com/BaggioPereira/octetframework-uni/blob/master/octet/src/examples/tandm_game/Images/new%20scene.JPG "New Scene")
 This piece of code was intented to be used when having multiple levels.
 It resets the world to a blank state and then redifines all the materials, mesh sizes, any shaders and sounds.
 I have included a shader to create invisible walls by taking an image and a mask and modifying the shader code and images so the colours are ignored and gives a transparency effect.
@@ -45,6 +45,7 @@ I have also used a function called buttonDelay() which slows down the input fron
 I will need to look into this and modify this function so the button update is not triggered when a button is pressed.
 
 All the commands for the controls are handled in controls().
+
 ![alt text](https://github.com/BaggioPereira/octetframework-uni/blob/master/octet/src/examples/tandm_game/Images/controls.JPG "Controls")
 
 In this piece of code it uses the state of the controller then only use part of the code depending on the outcome of the state.
