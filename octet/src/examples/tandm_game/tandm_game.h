@@ -157,20 +157,7 @@ namespace octet {
 			
 			world->addRigidBody(rigid_body);
 			rigid_bodies.push_back(rigid_body);
-			//rigid_body->setUserPointer(node);
-			if (letter == 'P')
-			{
-				
-			}
-			else if (letter == 'B')
-			{
-				
-			}
-			else if (letter == 'F')
-			{
-				
-			}
-			
+			rigid_body->setUserPointer(node);			
 		}
 	}
 
@@ -341,20 +328,15 @@ namespace octet {
 				{
 					playerRB->activate();
 					vec3 pos = playerNode->get_position();
-					if (pos.x()>-0.1f)
-						playerRB->applyCentralForce(btVector3(0, 0, -10));
-					else
-						playerRB->applyCentralForce(btVector3(0, 0, 0));
+					if (pos.z() > -1.0f)
+						playerRB->translate(btVector3(0, 0, -0.1f));
 				}
 				else if (buttonPress(Right))
 				{
 					playerRB->activate();
 					vec3 pos = playerNode->get_position();
-					printf("%g %g %g\n", pos.x(), pos.y(), pos.z());
-					if (pos.z()<0.1f)
-						playerRB->applyCentralForce(btVector3(0, 0, 10));
-					else
-						playerRB->applyCentralForce(btVector3(0, 0, 0));
+					if (pos.z()<1.0f)
+						playerRB->translate(btVector3(0, 0, 0.1f));
 				}
 			}
 			
@@ -378,6 +360,9 @@ namespace octet {
 				else if (!third)
 				{
 					playerRB->clearForces();
+					vec3 pos = playerNode->get_position();
+					if (pos.z() != 0)
+						playerRB->translate(btVector3(0, 0, -pos.z()));
 					third = !third;
 					first = !first;
 				}
@@ -444,20 +429,15 @@ namespace octet {
 				{
 					playerRB->activate();
 					vec3 pos = playerNode->get_position();
-					if (pos.x()>-0.1f)
-						playerRB->applyCentralForce(btVector3(0, 0, -10));
-					else
-						playerRB->applyCentralForce(btVector3(0, 0, 0));
+					if (pos.z() > -1.0f)
+						playerRB->translate(btVector3(0, 0, -0.1f));
 				}
 				else if (is_key_going_down(key_right))
 				{
 					playerRB->activate();
 					vec3 pos = playerNode->get_position();
-					printf("%g %g %g\n", pos.x(), pos.y(), pos.z());
-					if (pos.z()<0.1f)
-						playerRB->applyCentralForce(btVector3(0, 0, 10));
-					else
-						playerRB->applyCentralForce(btVector3(0, 0, 0));
+					if (pos.z()<1.0f)
+						playerRB->translate(btVector3(0, 0, 0.1f));
 				}
 			}
 
@@ -481,6 +461,9 @@ namespace octet {
 				else if (!third)
 				{
 					playerRB->clearForces();
+					vec3 pos = playerNode->get_position();
+					if (pos.z() != 0)
+						playerRB->translate(btVector3(0, 0, -pos.z()));
 					third = !third;
 					first = !first;
 				}
