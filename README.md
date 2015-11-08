@@ -6,7 +6,7 @@ This document will detail the my project, showing the code used and how it works
 My project is a platformer where you can change your prespective to get around obstables to reach the goal.
 The first step in this project was to read in a text file which contains the data for the level.
 This was done using loadtxt():
-![alt text]()
+![alt text](https://github.com/BaggioPereira/octetframework-uni/blob/master/octet/src/examples/tandm_game/Images/loadtxt.JPG "Load Text File")
 
 This reads in the entire text file and stores it into memory where it will be used later to create the level.
 After the text file has be read in, we will build the level.
@@ -40,16 +40,16 @@ I have also used a function called buttonDelay() which slows down the input fron
 I will need to look into this and modify this function so the button update is not triggered when a button is pressed.
 
 All the commands for the controls are handled in controls().
-![alt text]()
+![alt text](https://github.com/BaggioPereira/octetframework-uni/blob/master/octet/src/examples/tandm_game/Images/controls.JPG "Controls")
 In this piece of code it uses the state of the controller then only use part of the code depending on the outcome of the state.
 It also checks what perspective the player is currently in and modifies the controls to work to correctly.
 
 Finally in draw_world(), the physics of the game is active and also camera updates and collision checks.
-![alt text]()
+![alt text](https://github.com/BaggioPereira/octetframework-uni/blob/master/octet/src/examples/tandm_game/Images/collision%20check.JPG "Collision Checks")
 This piece of code does a collision check between the player with the obstacles and plays a sound when they collide.
 
-![alt text]()
+![alt text](https://github.com/BaggioPereira/octetframework-uni/blob/master/octet/src/examples/tandm_game/Images/physics.JPG "Physics")
 This piece of code does the physics update.
 
-![alt text]()
+![alt text](https://github.com/BaggioPereira/octetframework-uni/blob/master/octet/src/examples/tandm_game/Images/camera%20update.JPG "Camera")
 This piece of code updates the camera position, it is a modification from helper_fps_controller.
