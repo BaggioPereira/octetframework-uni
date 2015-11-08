@@ -74,6 +74,7 @@ namespace octet {
 
 	//string to hold the txt file
 	string contents;
+	bool multipart = false;
 
 	//Hinge variables
 	bool hingeOffsetNotSet = false;
@@ -103,7 +104,7 @@ namespace octet {
 
 	bool controllerConnected = false;
 
-	bool yButton = false, aButton = false;
+	bool yButton = false, aButton = false, xButton = false;
 
 	//Sounds
 	ALuint boing;
@@ -195,7 +196,6 @@ namespace octet {
 			playerNode = nodes.back();
 			playerRB->setUserIndex(PLAYER);
 			int index = playerRB->getUserIndex();
-			printf("%g\n", index);
 			playerRB->setDamping(0, 0);
 			playerRB->setLinearFactor(btVector3(1, 1, 0)); //constraints z axis movement
 			playerRB->setAngularFactor(btVector3(0, 0, 1)); //constraints x and y axis rotation
@@ -232,7 +232,6 @@ namespace octet {
 			{
 				offset = get_btVector3(flipperMesh->get_aabb().get_max());
 				offset = btVector3(offset.x()*0.5f, offset.y()*0.0f, offset.z()*0.0f);
-				printf("%g %g %g\n", offset.x(), offset.y(), offset.z());
 				hingeOffsetNotSet = true;
 			}
 			
@@ -248,7 +247,7 @@ namespace octet {
 	}
 
 	//Controller functions
-	void controller()
+	/*void controller()
 	{
 		//Xbox Controller detection code
 		ZeroMemory(&state, sizeof(XINPUT_STATE));
@@ -265,7 +264,7 @@ namespace octet {
 		{
 			printf("Controller is not connected\n");
 		}
-	}
+	}*/
 
 	//check state if controller is unplugged
 	XINPUT_STATE getState()
@@ -301,6 +300,8 @@ namespace octet {
 		{
 			if (third)
 			{
+				playerRB->setLinearFactor(btVector3(1, 1, 0)); 
+				playerRB->setAngularFactor(btVector3(0, 0, 1));
 				if (buttonPress(Left))
 				{
 					playerRB->activate();
@@ -316,6 +317,8 @@ namespace octet {
 
 			else if (first)
 			{
+				playerRB->setLinearFactor(btVector3(1, 1, 1));
+				playerRB->setAngularFactor(btVector3(1, 0, 1));
 				if (buttonPress(Down))
 				{
 					playerRB->activate();
@@ -333,6 +336,26 @@ namespace octet {
 					else
 						playerRB->applyCentralForce(btVector3(-10, 0, 0));
 				}
+
+				else if (buttonPress(Left))
+				{
+					playerRB->activate();
+					vec3 pos = playerNode->get_position();
+					if (pos.x()>-0.1f)
+						playerRB->applyCentralForce(btVector3(0, 0, -10));
+					else
+						playerRB->applyCentralForce(btVector3(0, 0, 0));
+				}
+				else if (buttonPress(Right))
+				{
+					playerRB->activate();
+					vec3 pos = playerNode->get_position();
+					printf("%g %g %g\n", pos.x(), pos.y(), pos.z());
+					if (pos.z()<0.1f)
+						playerRB->applyCentralForce(btVector3(0, 0, 10));
+					else
+						playerRB->applyCentralForce(btVector3(0, 0, 0));
+				}
 			}
 			
 			if (aButton)
@@ -348,20 +371,23 @@ namespace octet {
 			{
 				if (third)
 				{
-					cam->loadIdentity();
-					cam->rotate(90, vec3(0, -1, 0));
-					cam->translate(vec3(0, -46, -10));
 					playerRB->clearForces();
 					third = !third;
 					first = !first;
 				}
 				else if (!third)
 				{
-					cam->loadIdentity();
-					cam->translate(vec3(24, -24, 84));
 					playerRB->clearForces();
 					third = !third;
 					first = !first;
+				}
+			}
+
+			if (first)
+			{
+				if (xButton)
+				{
+					flipped = !flipped;
 				}
 			}
 
@@ -374,9 +400,11 @@ namespace octet {
 
 		else if (!controller)
 		{
-			//KEY INPUTS
+			//KEYBOARD INPUTS
 			if (third)
 			{
+				playerRB->setLinearFactor(btVector3(1, 1, 0));
+				playerRB->setAngularFactor(btVector3(0, 0, 1));
 				if (is_key_down(key_right))
 				{
 					playerRB->activate();
@@ -392,6 +420,8 @@ namespace octet {
 
 			else if (first)
 			{
+				playerRB->setLinearFactor(btVector3(1, 1, 1));
+				playerRB->setAngularFactor(btVector3(1, 0, 1));
 				if (is_key_down(key_up))
 				{
 					playerRB->activate();
@@ -409,6 +439,26 @@ namespace octet {
 					else
 						playerRB->applyCentralForce(btVector3(10, 0, 0));
 				}
+
+				else if (is_key_going_down(key_left))
+				{
+					playerRB->activate();
+					vec3 pos = playerNode->get_position();
+					if (pos.x()>-0.1f)
+						playerRB->applyCentralForce(btVector3(0, 0, -10));
+					else
+						playerRB->applyCentralForce(btVector3(0, 0, 0));
+				}
+				else if (is_key_going_down(key_right))
+				{
+					playerRB->activate();
+					vec3 pos = playerNode->get_position();
+					printf("%g %g %g\n", pos.x(), pos.y(), pos.z());
+					if (pos.z()<0.1f)
+						playerRB->applyCentralForce(btVector3(0, 0, 10));
+					else
+						playerRB->applyCentralForce(btVector3(0, 0, 0));
+				}
 			}
 
 			if (is_key_going_down(VK_SPACE))
@@ -424,19 +474,12 @@ namespace octet {
 			{
 				if (third)
 				{
-					//cam->loadIdentity();
-					//cam->rotate(90, vec3(0, -1, 0));
-					//camToWorld = cam->access_nodeToParent();
-					//camToWorld.w()=(playerNode->get_position() + vec3(-1.5f,1.25f,0)).xyz1();
-					////printf("%g %g %g \n", camToWorld.w().x(), camToWorld.w().y(), camToWorld.w().z());
-					//cam->translate(vec3(camToWorld.w().z(), camToWorld.w().y(), camToWorld.w().x()));
 					playerRB->clearForces();
 					third = !third;
 					first = !first;
 				}
 				else if (!third)
 				{
-					
 					playerRB->clearForces();
 					third = !third;
 					first = !first;
@@ -480,6 +523,16 @@ namespace octet {
 		{
 			aButton = !state.Gamepad.wButtons & GAMEPADBUTTONS[FaceA];
 		}
+
+		if (!xButton)
+		{
+			xButton = state.Gamepad.wButtons & GAMEPADBUTTONS[FaceX];
+		}
+
+		else if (xButton)
+		{
+			xButton = !state.Gamepad.wButtons & GAMEPADBUTTONS[FaceX];
+		}
 	}
 
 	//Sound
@@ -494,17 +547,20 @@ namespace octet {
 	{
 		rigid_bodies.reset();
 		flippers.reset();
+		springBodies.reset();
+		nodes.reset();
 		app_scene->reset();
 		app_scene->create_default_camera_and_lights();
 		app_scene->get_camera_instance(0)->set_far_plane(1000);
 		cam = app_scene->get_camera_instance(0)->get_node();
 		cam->translate(vec3(24, -24, 50));
 		jump = resource_dict::get_sound_handle(AL_FORMAT_MONO16, "src/examples/tandm_game/jump.wav");
+		boing = resource_dict::get_sound_handle(AL_FORMAT_MONO16, "src/examples/tandm_game/hit.wav");
 		cur_source = 0;
 		alGenSources(8, sources);
 		box = new mesh_box(0.5f);
-		flipperMesh = new mesh_box(vec3(0.5f, 0.25f, 0.5f));
-		blockerMesh = new mesh_box(vec3(0.5f, 1, 0.5f));
+		flipperMesh = new mesh_box(vec3(0.5f, 0.25f, 0.25f));
+		blockerMesh = new mesh_box(vec3(0.5f, 1, 0.25f));
 		image *transparentImg = new image("assets/transpparent.jpg");
 		image * transparentMask = new image("assets/transparent.gif");
 		param_shader *transparentShader = new param_shader("shaders/default.vs", "shaders/multitexture.fs");
@@ -515,15 +571,32 @@ namespace octet {
 		end = new material(vec4(1, 1, 1, 1));
 		player = new material(vec4(0, 1, 1, 0));
 		offset = btVector3(0, 0, 0);
-		controller();
+		printf("Keyboard Controls\n");
+		printf("Up arrow to move forward in 1st Person\n");
+		printf("Down arrow to move backward in 1st Person\n");
+		printf("Left arrow to move left in 3st Person\n");
+		printf("Right arrow to move right in 3st Person\n");
+		printf("Space to jump\n");
+		printf("S Key to switch from 3rd Person to 1st Person and vice-versa\n");
+		printf("F Key to flip in 1st Person\n");
+
+		printf("\n\n");
+		printf("Controller Controls\n");
+		printf("DPad Up to move forward in 1st Person\n");
+		printf("DPad Down to move backward in 1st Person\n");
+		printf("DPad Left to move left in 3st Person\n");
+		printf("DPad Right to move right in 3st Person\n");
+		printf("A to jump\n");
+		printf("Y to switch from 3rd Person to 1st Person and vice-versa\n");
+		printf("X to flip in 1st Person\n");
 	}
 
 	//read txt file and get level data
-	void loadTxt(int num)
+	void loadTxt()
 	{
 		std::fstream myFile;
 		std::stringstream fileName;
-		fileName << "level" <<num<< ".txt";
+		fileName << "level.txt";
 		myFile.open(fileName.str().c_str(), std::ios::in);
 		if (!myFile.is_open())
 		{
@@ -543,17 +616,54 @@ namespace octet {
 			myFile.close();
 
 			contents = file.str().c_str();
-			//printf("%s\n", contents.c_str());
-			createLevel();
+			levelCreate();
 		}
 	}
 
-	//create the level according to the txt file
-	void createLevel()
+	int findPosition(char letter,int start)
 	{
-		vec3 pos = vec3(0, 0, 0);
+		for (int i = start; i < contents.size(); i++)
+		{
+			if (contents[i] == letter)
+			{
+				return i;
+			}
+		}
+		return -1;
+	}
+
+	//check to see if level is 3D
+	void levelCreate()
+	{
+		if (contents.find("MultiPart") == -1)
+		{
+			createLevelArea(0, contents.size(), 0);
+		}
+
+		else
+		{
+			int startLoc = contents.find("Mid") + 3;
+			int endLoc = findPosition(';', startLoc);
+			printf("%d\n", startLoc);
+			createLevelArea(startLoc, endLoc, 0);
+
+
+			startLoc = contents.find("Front") + 5;
+			endLoc = findPosition(';', startLoc);
+			createLevelArea(startLoc, endLoc, 1);
+
+			startLoc = contents.find("Back") + 4;
+			endLoc = findPosition(';', startLoc);
+			createLevelArea(startLoc, endLoc, -1);
+		}			
+	}
+
+	//create the level according to the txt file
+	void createLevelArea(int startLoc, int endLoc, int z)
+	{
+		vec3 pos = vec3(0, 0, z);
 		int x = 0;
-		for (int i = 0; i < contents.size(); i++)
+		for (int i = startLoc; i < endLoc; i++)
 		{
 			char c = contents[i];
 			switch (c)
@@ -561,11 +671,6 @@ namespace octet {
 			case '\n': pos -= (vec3(x, 0, 0));
 				x = 0;
 				pos += vec3(0, -1, 0);
-				break;
-			case ' ': 
-			case '/':
-				x += 1; 
-				pos += vec3(1, 0, 0);
 				break;
 			case '_': add_rigid_body(pos, box, floor, c, false);
 				x += 1;
@@ -593,7 +698,10 @@ namespace octet {
 				x += 1;
 				pos += vec3(1, 0, 0);
 				break;
-			default : break;
+			default : 
+				x += 1;
+				pos += vec3(1, 0, 0); 
+				break;
 			}
 		}
 	}
@@ -603,7 +711,7 @@ namespace octet {
 	{
       app_scene =  new visual_scene();
 	  newScene();
-	  loadTxt(2);
+	  loadTxt();
     }
 
     /// this is called to draw the world
@@ -613,8 +721,6 @@ namespace octet {
       get_viewport_size(vx, vy);
       app_scene->begin_render(vx, vy);
 
-	  world->stepSimulation(1.0f / 30, 1.0f / 30, 1.0f / 30);
-
 	  //Collision checks
 	  int manifolds = world->getDispatcher()->getNumManifolds();
 	  for (int i = 0; i < manifolds; i++)
@@ -622,24 +728,25 @@ namespace octet {
 		  btPersistentManifold* contact = world->getDispatcher()->getManifoldByIndexInternal(i);
 		  int obj1 = contact->getBody0()->getUserIndex();
 		  int obj2 = contact->getBody1()->getUserIndex();
-		  if (obj1 == PLAYER || obj2 == PLAYER)
+		  if (obj1 == PLAYER)
 		  {
 			  if (obj2 == BLOCKER)
 			  {
 				  ALuint source = get_sound_source();
-				  alSourcei(source, AL_BUFFER, jump);
+				  alSourcei(source, AL_BUFFER, boing);
 				  alSourcePlay(source);
 			  }
 
 			  else if (obj2 == FLIPPER)
 			  {
 				  ALuint source = get_sound_source();
-				  alSourcei(source, AL_BUFFER, jump);
+				  alSourcei(source, AL_BUFFER, boing);
 				  alSourcePlay(source);
 			  }
 		  }
 	  }
-
+	  
+	  world->stepSimulation(1.0f / 30, 1.0f / 30, 1.0f / 30);
 	  //Physics setup
 	  for (unsigned i = 0; i != rigid_bodies.size(); ++i) {
 		  btRigidBody *rigid_body = rigid_bodies[i];
@@ -662,6 +769,7 @@ namespace octet {
 	  controls(controllerConnected);
 	  buttonDelay();
 
+	  //Camera update
 	  if (third)
 	  {
 		  cam->loadIdentity();
@@ -688,24 +796,6 @@ namespace octet {
 			  cam->translate(vec3(camToWorld.w().z(), camToWorld.w().y(), camToWorld.w().x()));
 		  }
 	  }
-	  //call a check for collisions
-	  //collided();
-
-	  /*if (is_key_going_down('1')||is_key_going_down(VK_NUMPAD1))
-	  {
-		  newScene();
-		  loadTxt(1);
-	  }
-	  if (is_key_going_down('2') || is_key_going_down(VK_NUMPAD2))
-	  {
-		  newScene();
-		  loadTxt(2);
-	  }
-	  if (is_key_going_down('3') || is_key_going_down(VK_NUMPAD3))
-	  {
-		  newScene();
-		  loadTxt(3);
-	  }*/
     }
   };
 }
