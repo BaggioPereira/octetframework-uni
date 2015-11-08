@@ -41,6 +41,7 @@ I will need to look into this and modify this function so the button update is n
 
 All the commands for the controls are handled in controls().
 ![alt text](https://github.com/BaggioPereira/octetframework-uni/blob/master/octet/src/examples/tandm_game/Images/controls.JPG "Controls")
+
 In this piece of code it uses the state of the controller then only use part of the code depending on the outcome of the state.
 It also checks what perspective the player is currently in and modifies the controls to work to correctly.
 
