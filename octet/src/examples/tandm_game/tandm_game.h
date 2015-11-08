@@ -77,7 +77,7 @@ namespace octet {
 	bool multipart = false;
 
 	//Hinge variables
-	bool hingeOffsetNotSet = false;
+	bool hingeOffsetNotSetF = false, hingeOffsetNotSetD = false, hingeOffsetNotSetG = false;
 	btVector3 offset;
 
 	//Xbox controller enums and state
@@ -189,45 +189,123 @@ namespace octet {
 		}
 
 		//spring blockers
-		if (letter == 'B')
+		if (letter == 'B'|| letter == 'V'||letter =='N')
 		{
 			btTransform localA, localB;
 			localA.setIdentity();
 			localB.setIdentity();
 			localA.getOrigin() = btVector3(position.x(), position.y(), position.z());
-			btRigidBody *springBody = rigid_bodies.back();
-			springBody->setUserIndex(BLOCKER);
-			springBody->setLinearFactor(btVector3(0, 1, 0));
-			btGeneric6DofSpringConstraint *springConstraint = new btGeneric6DofSpringConstraint(*staticObject, *springBody, localA, localB, true);
-			springConstraint->setLimit(0, 0, 0); //X Axis
-			springConstraint->setLimit(1, 3, -3); //Y Axis
-			springConstraint->setLimit(2, 3, -3); //Z Axis
-			springConstraint->setLimit(3, 0, 0); 
-			springConstraint->setLimit(4, 0, 0); 
-			springConstraint->setLimit(5, 0, 0); 
-			springConstraint->enableSpring(1, true); //int index implies the axis you want to move in
-			springConstraint->setStiffness(1, 100);
-			world->addConstraint(springConstraint);
-			rigid_bodies.back()->applyCentralForce(btVector3(0, 100, 0));
-			springBodies.push_back(springConstraint);
+			if (letter == 'B')
+			{
+				btRigidBody *springBody = rigid_bodies.back();
+				springBody->setUserIndex(BLOCKER);
+				springBody->setLinearFactor(btVector3(0, 1, 0));
+				btGeneric6DofSpringConstraint *springConstraint = new btGeneric6DofSpringConstraint(*staticObject, *springBody, localA, localB, true);
+				springConstraint->setLimit(0, 0, 0); //X Axis
+				springConstraint->setLimit(1, 3, -3); //Y Axis
+				springConstraint->setLimit(2, 0, 0); //Z Axis
+				springConstraint->setLimit(3, 0, 0); 
+				springConstraint->setLimit(4, 0, 0); 
+				springConstraint->setLimit(5, 0, 0); 
+				springConstraint->enableSpring(1, true); //int index implies the axis you want to move in
+				springConstraint->setStiffness(1, 100);
+				world->addConstraint(springConstraint);
+				rigid_bodies.back()->applyCentralForce(btVector3(0, 100, 0));
+				springBodies.push_back(springConstraint);
+			}
+
+			else if (letter == 'V')
+			{
+				btRigidBody *springBody = rigid_bodies.back();
+				springBody->setUserIndex(BLOCKER);
+				springBody->setLinearFactor(btVector3(1, 0, 0));
+				btGeneric6DofSpringConstraint *springConstraint = new btGeneric6DofSpringConstraint(*staticObject, *springBody, localA, localB, true);
+				springConstraint->setLimit(0, 3, -3); //X Axis
+				springConstraint->setLimit(1, 0, 0); //Y Axis
+				springConstraint->setLimit(2, 0, 0); //Z Axis
+				springConstraint->setLimit(3, 0, 0);
+				springConstraint->setLimit(4, 0, 0);
+				springConstraint->setLimit(5, 0, 0);
+				springConstraint->enableSpring(0, true); //int index implies the axis you want to move in
+				springConstraint->setStiffness(0, 100);
+				world->addConstraint(springConstraint);
+				rigid_bodies.back()->applyCentralForce(btVector3(100, 0, 0));
+				springBodies.push_back(springConstraint);
+			}
+
+			else if (letter == 'N')
+			{
+				btRigidBody *springBody = rigid_bodies.back();
+				springBody->setUserIndex(BLOCKER);
+				springBody->setLinearFactor(btVector3(0, 0, 1));
+				btGeneric6DofSpringConstraint *springConstraint = new btGeneric6DofSpringConstraint(*staticObject, *springBody, localA, localB, true);
+				springConstraint->setLimit(0, 0, 0); //X Axis
+				springConstraint->setLimit(1, 0, 0); //Y Axis
+				springConstraint->setLimit(2, 3, -3); //Z Axis
+				springConstraint->setLimit(3, 0, 0);
+				springConstraint->setLimit(4, 0, 0);
+				springConstraint->setLimit(5, 0, 0);
+				springConstraint->enableSpring(2, true); //int index implies the axis you want to move in
+				springConstraint->setStiffness(2, 100);
+				world->addConstraint(springConstraint);
+				rigid_bodies.back()->applyCentralForce(btVector3(0, 0, 100));
+				springBodies.push_back(springConstraint);
+			}			
 		}
 
 		//Hinges
-		if (letter == 'F')
+		if (letter == 'F'||letter == 'D'||letter =='G')
 		{
-			if (!hingeOffsetNotSet)
+			if (letter == 'F')
 			{
-				offset = get_btVector3(flipperMesh->get_aabb().get_max());
-				offset = btVector3(offset.x()*0.5f, offset.y()*0.0f, offset.z()*0.0f);
-				hingeOffsetNotSet = true;
+				if (!hingeOffsetNotSetF)
+				{
+					offset = get_btVector3(flipperMesh->get_aabb().get_max());
+					offset = btVector3(offset.x()*0.5f, offset.y()*0.0f, offset.z()*0.0f);
+					hingeOffsetNotSetF = true;
+				}
+
+				btRigidBody *hingeBody = rigid_bodies.back();
+				hingeBody->setUserIndex(FLIPPER);
+				btHingeConstraint *flipperHinge = new btHingeConstraint(*hingeBody, offset, btVector3(0, 0, 1));
+				flipperHinge->enableAngularMotor(true, 10, 1000);
+				world->addConstraint(flipperHinge);
+				flippers.push_back(flipperHinge);
+			}
+
+			else if (letter == 'D')
+			{
+				if (!hingeOffsetNotSetD)
+				{
+					offset = get_btVector3(flipperMesh->get_aabb().get_max());
+					offset = btVector3(offset.x()*0.0f, offset.y()*0.5f, offset.z()*0.0f);
+					hingeOffsetNotSetD = true;
+				}
+
+				btRigidBody *hingeBody = rigid_bodies.back();
+				hingeBody->setUserIndex(FLIPPER);
+				btHingeConstraint *flipperHinge = new btHingeConstraint(*hingeBody, offset, btVector3(1, 0, 0));
+				flipperHinge->enableAngularMotor(true, 10, 1000);
+				world->addConstraint(flipperHinge);
+				flippers.push_back(flipperHinge);
 			}
 			
-			btRigidBody *hingeBody = rigid_bodies.back();
-			hingeBody->setUserIndex(FLIPPER);
-			btHingeConstraint *flipperHinge =new btHingeConstraint(*hingeBody, offset, btVector3(0, 0, 1));
-			flipperHinge->enableAngularMotor(true, 10, 1000);
-			world->addConstraint(flipperHinge);
-			flippers.push_back(flipperHinge);
+			else if (letter == 'G')
+			{
+				if (!hingeOffsetNotSetG)
+				{
+					offset = get_btVector3(flipperMesh->get_aabb().get_max());
+					offset = btVector3(offset.x()*0.0f, offset.y()*0.0f, offset.z()*0.5f);
+					hingeOffsetNotSetG = true;
+				}
+
+				btRigidBody *hingeBody = rigid_bodies.back();
+				hingeBody->setUserIndex(FLIPPER);
+				btHingeConstraint *flipperHinge = new btHingeConstraint(*hingeBody, offset, btVector3(0, 1, 0));
+				flipperHinge->enableAngularMotor(true, 10, 1000);
+				world->addConstraint(flipperHinge);
+				flippers.push_back(flipperHinge);
+			}
 		}
 
 		worldCoord.loadIdentity();
@@ -305,7 +383,6 @@ namespace octet {
 			else if (first)
 			{
 				playerRB->setLinearFactor(btVector3(1, 1, 1));
-				playerRB->setAngularFactor(btVector3(1, 0, 1));
 				if (buttonPress(Down))
 				{
 					playerRB->activate();
@@ -328,15 +405,31 @@ namespace octet {
 				{
 					playerRB->activate();
 					vec3 pos = playerNode->get_position();
-					if (pos.z() > -1.0f)
-						playerRB->translate(btVector3(0, 0, -0.1f));
+					if (!flipped)
+					{
+						if (pos.z()>-1.0f)
+							playerRB->translate(btVector3(0, 0, -0.1f));
+					}
+					else
+					{
+						if (pos.z()<1.0f)
+							playerRB->translate(btVector3(0, 0, 0.1f));
+					}
 				}
 				else if (buttonPress(Right))
 				{
 					playerRB->activate();
 					vec3 pos = playerNode->get_position();
-					if (pos.z()<1.0f)
-						playerRB->translate(btVector3(0, 0, 0.1f));
+					if (!flipped)
+					{
+						if (pos.z()<1.0f)
+							playerRB->translate(btVector3(0, 0, 0.1f));
+					}
+					else
+					{
+						if (pos.z()>-1.0f)
+							playerRB->translate(btVector3(0, 0, -0.1f));
+					}
 				}
 			}
 			
@@ -406,7 +499,6 @@ namespace octet {
 			else if (first)
 			{
 				playerRB->setLinearFactor(btVector3(1, 1, 1));
-				playerRB->setAngularFactor(btVector3(1, 0, 1));
 				if (is_key_down(key_up))
 				{
 					playerRB->activate();
@@ -429,15 +521,31 @@ namespace octet {
 				{
 					playerRB->activate();
 					vec3 pos = playerNode->get_position();
-					if (pos.z() > -1.0f)
-						playerRB->translate(btVector3(0, 0, -0.1f));
+					if (!flipped)
+					{
+						if (pos.z()>-1.0f)
+							playerRB->translate(btVector3(0, 0, -0.1f));
+					}
+					else
+					{
+						if (pos.z()<1.0f)
+							playerRB->translate(btVector3(0, 0, 0.1f));
+					}
 				}
 				else if (is_key_going_down(key_right))
 				{
 					playerRB->activate();
 					vec3 pos = playerNode->get_position();
-					if (pos.z()<1.0f)
-						playerRB->translate(btVector3(0, 0, 0.1f));
+					if (!flipped)
+					{
+						if (pos.z()<1.0f)
+							playerRB->translate(btVector3(0, 0, 0.1f));
+					}
+					else
+					{
+						if (pos.z()>-1.0f)
+							playerRB->translate(btVector3(0, 0, -0.1f));
+					}
 				}
 			}
 
@@ -543,7 +651,7 @@ namespace octet {
 		alGenSources(8, sources);
 		box = new mesh_box(0.5f);
 		flipperMesh = new mesh_box(vec3(0.5f, 0.25f, 0.25f));
-		blockerMesh = new mesh_box(vec3(0.5f, 1, 0.25f));
+		blockerMesh = new mesh_box(vec3(0.5f, 0.25f, 0.25f));
 		image *transparentImg = new image("assets/transpparent.jpg");
 		image * transparentMask = new image("assets/transparent.gif");
 		param_shader *transparentShader = new param_shader("shaders/default.vs", "shaders/multitexture.fs");
@@ -663,8 +771,15 @@ namespace octet {
 				x += 1;
 				pos += vec3(1, 0, 0);
 				break;
+			case 'V':
 			case 'B':
-			case 'F': add_rigid_body(pos, flipperMesh, flip, c, true);
+			case 'N': add_rigid_body(pos, blockerMesh, flip, c, true);
+				x += 1;
+				pos += vec3(1, 0, 0);
+				break;
+			case 'D':
+			case 'F':
+			case 'G': add_rigid_body(pos, flipperMesh, flip, c, true);
 				x += 1;
 				pos += vec3(1, 0, 0);
 				break;
@@ -776,7 +891,7 @@ namespace octet {
 			  cam->rotate(90, vec3(0, 1, 0));
 			  camToWorld = cam->access_nodeToParent();
 			  camToWorld.w() = (playerNode->get_position() + vec3(4.5f, 1.25f, 0.0f)).xyz1();
-			  cam->translate(vec3(camToWorld.w().z(), camToWorld.w().y(), camToWorld.w().x()));
+			  cam->translate(vec3(-camToWorld.w().z(), camToWorld.w().y(), camToWorld.w().x()));
 		  }
 	  }
     }
