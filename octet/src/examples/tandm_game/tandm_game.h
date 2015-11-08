@@ -166,9 +166,7 @@ namespace octet {
 	{
 		worldCoord.translate(position);
 		add_part(worldCoord, msh, mat, active,letter);
-		
-		//rigid_bodies.back()->setFriction(0);
-		//rigid_bodies.back()->setRestitution(0);
+		rigid_bodies.back()->setRestitution(0);
 
 		//static object 
 		if (letter == 'O')
@@ -312,25 +310,6 @@ namespace octet {
 	}
 
 	//Controller functions
-	/*void controller()
-	{
-		//Xbox Controller detection code
-		ZeroMemory(&state, sizeof(XINPUT_STATE));
-
-		// Simply get the state of the controller from XInput.
-		dwResult = XInputGetState(0, &state);
-
-		if (dwResult == ERROR_SUCCESS)
-		{
-			printf("Controller is connected\n");
-			controllerConnected = true;
-		}
-		else
-		{
-			printf("Controller is not connected\n");
-		}
-	}*/
-
 	//check state if controller is unplugged
 	XINPUT_STATE getState()
 	{
