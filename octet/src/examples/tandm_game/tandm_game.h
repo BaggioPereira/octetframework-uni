@@ -247,7 +247,7 @@ namespace octet {
 	}
 
 	//Controller functions
-	void controller()
+	/*void controller()
 	{
 		//Xbox Controller detection code
 		ZeroMemory(&state, sizeof(XINPUT_STATE));
@@ -264,7 +264,7 @@ namespace octet {
 		{
 			printf("Controller is not connected\n");
 		}
-	}
+	}*/
 
 	//check state if controller is unplugged
 	XINPUT_STATE getState()
@@ -300,6 +300,8 @@ namespace octet {
 		{
 			if (third)
 			{
+				playerRB->setLinearFactor(btVector3(1, 1, 0)); 
+				playerRB->setAngularFactor(btVector3(0, 0, 1));
 				if (buttonPress(Left))
 				{
 					playerRB->activate();
@@ -315,6 +317,8 @@ namespace octet {
 
 			else if (first)
 			{
+				playerRB->setLinearFactor(btVector3(1, 1, 1));
+				playerRB->setAngularFactor(btVector3(1, 0, 1));
 				if (buttonPress(Down))
 				{
 					playerRB->activate();
@@ -331,6 +335,26 @@ namespace octet {
 						playerRB->applyCentralForce(btVector3(10, 0, 0));
 					else
 						playerRB->applyCentralForce(btVector3(-10, 0, 0));
+				}
+
+				else if (buttonPress(Left))
+				{
+					playerRB->activate();
+					vec3 pos = playerNode->get_position();
+					if (pos.x()>-0.1f)
+						playerRB->applyCentralForce(btVector3(0, 0, -10));
+					else
+						playerRB->applyCentralForce(btVector3(0, 0, 0));
+				}
+				else if (buttonPress(Right))
+				{
+					playerRB->activate();
+					vec3 pos = playerNode->get_position();
+					printf("%g %g %g\n", pos.x(), pos.y(), pos.z());
+					if (pos.z()<0.1f)
+						playerRB->applyCentralForce(btVector3(0, 0, 10));
+					else
+						playerRB->applyCentralForce(btVector3(0, 0, 0));
 				}
 			}
 			
@@ -376,9 +400,11 @@ namespace octet {
 
 		else if (!controller)
 		{
-			//KEY INPUTS
+			//KEYBOARD INPUTS
 			if (third)
 			{
+				playerRB->setLinearFactor(btVector3(1, 1, 0));
+				playerRB->setAngularFactor(btVector3(0, 0, 1));
 				if (is_key_down(key_right))
 				{
 					playerRB->activate();
@@ -394,6 +420,8 @@ namespace octet {
 
 			else if (first)
 			{
+				playerRB->setLinearFactor(btVector3(1, 1, 1));
+				playerRB->setAngularFactor(btVector3(1, 0, 1));
 				if (is_key_down(key_up))
 				{
 					playerRB->activate();
@@ -410,6 +438,26 @@ namespace octet {
 						playerRB->applyCentralForce(btVector3(-10, 0, 0));
 					else
 						playerRB->applyCentralForce(btVector3(10, 0, 0));
+				}
+
+				else if (is_key_going_down(key_left))
+				{
+					playerRB->activate();
+					vec3 pos = playerNode->get_position();
+					if (pos.x()>-0.1f)
+						playerRB->applyCentralForce(btVector3(0, 0, -10));
+					else
+						playerRB->applyCentralForce(btVector3(0, 0, 0));
+				}
+				else if (is_key_going_down(key_right))
+				{
+					playerRB->activate();
+					vec3 pos = playerNode->get_position();
+					printf("%g %g %g\n", pos.x(), pos.y(), pos.z());
+					if (pos.z()<0.1f)
+						playerRB->applyCentralForce(btVector3(0, 0, 10));
+					else
+						playerRB->applyCentralForce(btVector3(0, 0, 0));
 				}
 			}
 
@@ -499,6 +547,8 @@ namespace octet {
 	{
 		rigid_bodies.reset();
 		flippers.reset();
+		springBodies.reset();
+		nodes.reset();
 		app_scene->reset();
 		app_scene->create_default_camera_and_lights();
 		app_scene->get_camera_instance(0)->set_far_plane(1000);
@@ -521,7 +571,6 @@ namespace octet {
 		end = new material(vec4(1, 1, 1, 1));
 		player = new material(vec4(0, 1, 1, 0));
 		offset = btVector3(0, 0, 0);
-		controller();
 		printf("Keyboard Controls\n");
 		printf("Up arrow to move forward in 1st Person\n");
 		printf("Down arrow to move backward in 1st Person\n");
@@ -567,7 +616,6 @@ namespace octet {
 			myFile.close();
 
 			contents = file.str().c_str();
-			printf("%s\n", contents.c_str());
 			levelCreate();
 		}
 	}
@@ -584,6 +632,7 @@ namespace octet {
 		return -1;
 	}
 
+	//check to see if level is 3D
 	void levelCreate()
 	{
 		if (contents.find("MultiPart") == -1)
@@ -623,11 +672,6 @@ namespace octet {
 				x = 0;
 				pos += vec3(0, -1, 0);
 				break;
-			case ' ': 
-			case '/':
-				x += 1; 
-				pos += vec3(1, 0, 0);
-				break;
 			case '_': add_rigid_body(pos, box, floor, c, false);
 				x += 1;
 				pos += vec3(1, 0, 0);
@@ -654,7 +698,10 @@ namespace octet {
 				x += 1;
 				pos += vec3(1, 0, 0);
 				break;
-			default : break;
+			default : 
+				x += 1;
+				pos += vec3(1, 0, 0); 
+				break;
 			}
 		}
 	}
@@ -673,8 +720,6 @@ namespace octet {
       int vx = 0, vy = 0;
       get_viewport_size(vx, vy);
       app_scene->begin_render(vx, vy);
-
-	  world->stepSimulation(1.0f / 30, 1.0f / 30, 1.0f / 30);
 
 	  //Collision checks
 	  int manifolds = world->getDispatcher()->getNumManifolds();
@@ -700,7 +745,8 @@ namespace octet {
 			  }
 		  }
 	  }
-
+	  
+	  world->stepSimulation(1.0f / 30, 1.0f / 30, 1.0f / 30);
 	  //Physics setup
 	  for (unsigned i = 0; i != rigid_bodies.size(); ++i) {
 		  btRigidBody *rigid_body = rigid_bodies[i];
